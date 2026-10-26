@@ -51,6 +51,12 @@ interface CanvasProps {
 const BAYES_EXAMPLE_ID = "bayesWithCustomVisualization";
 const BAYES_FORMULA_ID = "bayes-theorem";
 
+// Space between the widest formula and the graphs placed beside it.
+const VISUALIZATION_GAP = 80;
+
+const isVisualizationNode = (node: Node) =>
+  node.type === "graph" || node.id === "bayes-chart";
+
 const CanvasFlow = observer(
   ({ controls, environment, computationStore }: CanvasProps) => {
     // Toggle state for showing all drag handles
@@ -65,6 +71,9 @@ const CanvasFlow = observer(
 
     // Track if initial fitView has been called to prevent re-fitting on every render
     const initialFitViewCalledRef = useRef(false);
+
+    // Track if graphs have been placed beside the measured formulas
+    const visualizationsPlacedRef = useRef(false);
 
     // Track pending label update animation frame (outside useEffect for persistence)
     const labelUpdateFrameRef = useRef<number | null>(null);
@@ -350,11 +359,42 @@ const CanvasFlow = observer(
       ) {
         // Wait until variable-node bootstrap has completed (including zero-variable configs).
         if (bootstrapCompleteRef.current) {
+          // Before the first fit, move graphs a fixed gap right of the widest
+          // formula, so narrow formulas don't leave a wide empty space and wide
+          // ones don't overlap their graphs.
+          if (!visualizationsPlacedRef.current) {
+            visualizationsPlacedRef.current = true;
+            const formulaRight = Math.max(
+              ...getFormulaNodes(nodes).map(
+                (node) => node.position.x + (node.measured?.width ?? 0)
+              )
+            );
+            if (
+              Number.isFinite(formulaRight) &&
+              nodes.some(isVisualizationNode)
+            ) {
+              setNodes((currentNodes) =>
+                currentNodes.map((node) =>
+                  isVisualizationNode(node)
+                    ? {
+                        ...node,
+                        position: {
+                          ...node.position,
+                          x: formulaRight + VISUALIZATION_GAP,
+                        },
+                      }
+                    : node
+                )
+              );
+              // The fit runs on the next render, after the move.
+              return;
+            }
+          }
           fitView({ duration: 300, padding: 0.2 });
           initialFitViewCalledRef.current = true;
         }
       }
-    }, [nodesInitialized, nodes, fitView]);
+    }, [nodesInitialized, nodes, fitView, setNodes]);
 
     // Re-add variable nodes when computation store variables change
     useEffect(() => {

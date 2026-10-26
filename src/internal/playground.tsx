@@ -2,13 +2,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { observer } from "mobx-react-lite";
 
-import { Info } from "lucide-react";
-
 import { useStore } from "../core/hooks";
 import { Config } from "../index.ts";
 import { debugStore } from "../store/debug";
-import IconButton from "../ui/icon-button";
-import Modal from "../ui/modal";
 import Canvas from "./canvas.tsx";
 import DebugModal from "./interpreter";
 import NodeVisibilitySidebar from "./node-visibility-sidebar";
@@ -29,7 +25,6 @@ const PlaygroundCanvas = observer(() => {
   const [showVariablesSidebar, setShowVariablesSidebar] =
     useState<boolean>(false);
   const [showDebugModal, setShowDebugModal] = useState<boolean>(false);
-  const [isCreditsModalOpen, setIsCreditsModalOpen] = useState<boolean>(false);
   const [configKey, setConfigKey] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevConfigRef = useRef<Config | null>(null);
@@ -96,17 +91,6 @@ const PlaygroundCanvas = observer(() => {
               />
             </div>
           </div>
-          {/* Credits button - positioned in main content area */}
-          <div className="absolute bottom-4 right-4 z-30">
-            <IconButton
-              size="lg"
-              strokeWidth={1.5}
-              icon={Info}
-              alt="Credits"
-              onClick={() => setIsCreditsModalOpen(true)}
-              title="Credits"
-            />
-          </div>
         </div>
         {/* Node visibility sidebar */}
         <NodeVisibilitySidebar
@@ -171,22 +155,6 @@ const PlaygroundCanvas = observer(() => {
           onClose={() => setShowDebugModal(false)}
         />
       </div>
-      {/* Credits Modal */}
-      <Modal
-        isOpen={isCreditsModalOpen}
-        onClose={() => setIsCreditsModalOpen(false)}
-        title="Built by HCI @ Penn"
-        maxWidth="max-w-md"
-      >
-        <div className="p-6">
-          <ul className="space-y-3 text-lg">
-            <li>Eric Dai</li>
-            <li>Zain Khan</li>
-            <li>Andrew Head</li>
-            <li>Jeff Tao</li>
-          </ul>
-        </div>
-      </Modal>
     </div>
   );
 });

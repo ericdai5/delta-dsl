@@ -12,6 +12,7 @@ import { kinetic3D } from "./kinetic-3d";
 import { kineticEnergy } from "./kinetic-energy";
 import { lossFunction } from "./loss-function";
 import { matrixMultiplication } from "./matrix-multiplication";
+import { newCanvas } from "./new-canvas";
 import { parameterizedPlane } from "./parameterized-plane";
 import { parametric3D } from "./parametric-3d";
 import { quadratic2D } from "./quadratic-2d";
@@ -56,6 +57,35 @@ export const examples = {
   gradientDescent,
   task2training,
   task2instruction,
+  newCanvas,
+};
+
+// The eight examples from Figure 1 of the paper, in figure order. The public
+// Playground's picker shows only these, plus a new canvas.
+export const featuredExamples = [
+  "kinetic2D",
+  "bayesSimpleVisualization",
+  "svgIntegration",
+  "average",
+  "vectorAddition",
+  "matrixMultiplication",
+  "waveEquationSVG",
+  "gradientDescent",
+] as const;
+
+// Public names for the featured examples, from Section 4.3 of the paper.
+export const featuredExampleNames: Record<
+  (typeof featuredExamples)[number],
+  string
+> = {
+  kinetic2D: "Kinetic energy",
+  bayesSimpleVisualization: "Probability operations",
+  svgIntegration: "Exponential decay",
+  average: "Arithmetic mean",
+  vectorAddition: "Linear combination of vectors",
+  matrixMultiplication: "Matrix multiplication",
+  waveEquationSVG: "Harmonic motion",
+  gradientDescent: "Gradient descent",
 };
 
 export const exampleDisplayNames = {
@@ -87,6 +117,7 @@ export const exampleDisplayNames = {
   gradientDescent: "Gradient Descent Stepping",
   task2training: "Task 2 Training",
   task2instruction: "Task 2 Instruction",
+  newCanvas: "New canvas",
 } as const;
 
 export default examples;

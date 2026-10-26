@@ -25,10 +25,10 @@ export const CanvasControls = memo(({ showGrips, onToggleGrips }: CanvasControls
   };
 
   return (
-    <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-10">
+    <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
       <button
         onClick={handleZoomIn}
-        className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
+        className="w-10 h-10 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
         title="Zoom In"
       >
         <Plus size={16} />
@@ -36,7 +36,7 @@ export const CanvasControls = memo(({ showGrips, onToggleGrips }: CanvasControls
 
       <button
         onClick={handleZoomOut}
-        className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
+        className="w-10 h-10 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
         title="Zoom Out"
       >
         <Minus size={16} />
@@ -44,7 +44,7 @@ export const CanvasControls = memo(({ showGrips, onToggleGrips }: CanvasControls
 
       <button
         onClick={handleFitView}
-        className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
+        className="w-10 h-10 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
         title="Fit View"
       >
         <Maximize size={16} />
@@ -53,7 +53,7 @@ export const CanvasControls = memo(({ showGrips, onToggleGrips }: CanvasControls
       {onToggleGrips && (
         <button
           onClick={onToggleGrips}
-          className={`w-10 h-10 border rounded-xl flex items-center justify-center hover:scale-105 transition-all duration-200 shadow-sm ${
+          className={`w-10 h-10 border rounded flex items-center justify-center hover:scale-105 transition-all duration-200 shadow-sm ${
             showGrips
               ? "bg-slate-100 border-slate-300 text-slate-800"
               : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -77,7 +77,7 @@ export const SimpleCanvasControls = memo(() => {
     <div className="absolute bottom-2 left-2 z-10">
       <button
         onClick={handleFitView}
-        className="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
+        className="w-8 h-8 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:scale-105 transition-all duration-200 shadow-sm"
         title="Fit View"
       >
         <Maximize size={16} />

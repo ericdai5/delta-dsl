@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 
 import { undo, redo } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
+import { EditorView } from "@codemirror/view";
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 
 import { debugStore } from "../store/debug";
@@ -12,6 +13,15 @@ import {
   highlightVariableRange,
   variableHighlightExtension,
 } from "../util/codemirror/extension";
+
+// CodeMirror's base theme gives its scroller a plain monospace font, which
+// overrides any font set on the editor element, so the code font is set here.
+const codeFontTheme = EditorView.theme({
+  ".cm-scroller": {
+    fontFamily:
+      '"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+  },
+});
 
 export interface EditorHandle {
   undo: () => void;
@@ -82,13 +92,10 @@ const Editor = observer(forwardRef<EditorHandle, EditorProps>(({ code, onChange,
             javascript(),
             ...createAutocompletion(),
             ...variableHighlightExtension,
+            codeFontTheme,
           ]}
           theme="light"
-          style={{
-            fontSize: "13px",
-            fontFamily:
-              'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-          }}
+          style={{ fontSize: "13px" }}
           basicSetup={{
             lineNumbers: true,
             foldGutter: true,

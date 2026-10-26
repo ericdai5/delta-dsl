@@ -3,23 +3,30 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { observer } from "mobx-react-lite";
 
-import {
-  PanelRightClose,
-  PanelRightOpen,
-  Redo2,
-  Sparkles,
-  Undo2,
-} from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 
 import { Provider } from "./core";
 import { examples as formulaExamples } from "./examples";
 import { Config } from "./formulize";
-import Editor, { EditorHandle } from "./internal/api-code-editor";
-import ExampleSwitcher from "./internal/example-switcher";
+import Editor from "./internal/api-code-editor";
 import PlaygroundCanvas from "./internal/playground";
+import PlaygroundBreadcrumb from "./internal/playground-breadcrumb";
 import { debugStore } from "./store/debug";
 import IconButton from "./ui/icon-button";
 import { executeUserCode } from "./util/code-executor";
+
+// The code editor's undo and redo shortcuts (CodeMirror's history keymap):
+// redo is Shift+Cmd+Z on a Mac and Ctrl+Y elsewhere.
+const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+const shortcutHints = isMac
+  ? [
+      { keys: "⌘Z", action: "Undo" },
+      { keys: "⇧⌘Z", action: "Redo" },
+    ]
+  : [
+      { keys: "Ctrl+Z", action: "Undo" },
+      { keys: "Ctrl+Y", action: "Redo" },
+    ];
 
 const APIPage = observer(() => {
   const navigate = useNavigate();
@@ -45,7 +52,6 @@ const APIPage = observer(() => {
   const [editorWidth, setEditorWidth] = useState(400);
   const containerRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
-  const editorRef = useRef<EditorHandle>(null);
 
   // Navigate to example by updating the URL
   const setSelectedTemplate = useCallback(
@@ -134,36 +140,78 @@ const APIPage = observer(() => {
   );
 
   return (
-    <div ref={containerRef} className="relative h-full flex">
-      {/* Editor Panel */}
-      <div
-        className={`${isRendered ? "border-r border-slate-200" : ""} overflow-hidden flex flex-col flex-shrink-0`}
-        style={{ width: isRendered ? editorWidth : 0, transition: isRendered ? undefined : "width 0.3s ease-in-out" }}
-      >
-        <div className="min-w-[300px] h-full flex flex-col">
-          <div className="p-2.5 border-b border-slate-200 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <ExampleSwitcher
-                onConfigSelect={setSelectedTemplate}
-                activeConfigKey={selectedTemplate}
+    <div className="h-full flex flex-col">
+      {/* Top bar, spanning the code panel and the preview */}
+      <header className="flex h-12 flex-shrink-0 items-center border-b border-slate-200 bg-white px-4">
+        <PlaygroundBreadcrumb
+          onConfigSelect={setSelectedTemplate}
+          activeConfigKey={selectedTemplate}
+        />
+      </header>
+      <div ref={containerRef} className="relative min-h-0 flex-1 flex">
+        {/* Editor Panel */}
+        <div
+          className={`${isRendered ? "border-r border-slate-200" : ""} overflow-hidden flex flex-col flex-shrink-0`}
+          style={{
+            width: isRendered ? editorWidth : 0,
+            transition: isRendered ? undefined : "width 0.3s ease-in-out",
+          }}
+        >
+          <div className="min-w-[300px] h-full flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <Editor
+                code={debugStore.code}
+                onChange={(newCode) => debugStore.setCode(newCode)}
+                onRender={() => {}}
+                error={error}
               />
-              <div className="flex items-center gap-2">
-                <div className="flex items-center border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                  <button
-                    onClick={() => editorRef.current?.undo()}
-                    className="p-2.5 hover:bg-slate-50 transition-colors border-r border-slate-200"
-                    title="Undo"
-                  >
-                    <Undo2 className="w-4 h-4 text-slate-600" />
-                  </button>
-                  <button
-                    onClick={() => editorRef.current?.redo()}
-                    className="p-2.5 hover:bg-slate-50 transition-colors"
-                    title="Redo"
-                  >
-                    <Redo2 className="w-4 h-4 text-slate-600" />
-                  </button>
-                </div>
+            </div>
+            {/* Undo and redo are keyboard shortcuts; this is the reminder. */}
+            <div className="flex flex-shrink-0 items-center gap-4 border-t border-slate-200 px-3 py-2 text-xs text-slate-500">
+              {shortcutHints.map(({ keys, action }) => (
+                <span key={action} className="flex items-center gap-1.5">
+                  <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[11px] text-slate-600">
+                    {keys}
+                  </kbd>
+                  {action}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Resize Handle */}
+        {isRendered && (
+          <div className="relative flex-shrink-0 w-0">
+            <div
+              onMouseDown={handleResizeStart}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 cursor-col-resize group flex items-center justify-center w-4 h-12"
+            >
+              <div className="w-1.5 h-8 rounded-full bg-white border border-slate-200 group-hover:bg-slate-100 group-hover:border-slate-300 transition-colors shadow-sm" />
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Panel */}
+        <div className="relative flex-1 min-w-0">
+          <Provider config={config || undefined} onError={handleRenderError}>
+            <PlaygroundCanvas />
+          </Provider>
+          {/* Editor controls sit just outside the code panel, against its
+              right border, so they never cover the code. */}
+          <div className="absolute top-2.5 left-2.5 z-30 flex flex-col gap-2">
+            {/* The toggle comes first so it stays in the same spot whether
+                the editor is open or collapsed. */}
+            {isRendered ? (
+              <>
+                <IconButton
+                  size="lg"
+                  icon={PanelRightOpen}
+                  alt="Toggle Editor"
+                  onClick={() => setIsRendered(!isRendered)}
+                  title="Toggle Code Editor"
+                  tooltipPosition="right"
+                />
                 <IconButton
                   size="lg"
                   icon={Sparkles}
@@ -173,61 +221,19 @@ const APIPage = observer(() => {
                   tooltipPosition="right"
                   isActive={debugStore.autoFormat}
                 />
-                <IconButton
-                  size="lg"
-                  icon={PanelRightOpen}
-                  alt="Toggle Editor"
-                  onClick={() => setIsRendered(!isRendered)}
-                  title="Toggle Code Editor"
-                  tooltipPosition="right"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Editor
-              ref={editorRef}
-              code={debugStore.code}
-              onChange={(newCode) => debugStore.setCode(newCode)}
-              onRender={() => {}}
-              error={error}
-            />
+              </>
+            ) : (
+              <IconButton
+                size="lg"
+                icon={PanelRightClose}
+                alt="Toggle Editor"
+                onClick={() => setIsRendered(!isRendered)}
+                title="Toggle Code Editor"
+                tooltipPosition="right"
+              />
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Resize Handle */}
-      {isRendered && (
-        <div className="relative flex-shrink-0 w-0">
-          <div
-            onMouseDown={handleResizeStart}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 cursor-col-resize group flex items-center justify-center w-4 h-12"
-          >
-            <div className="w-1.5 h-8 rounded-full bg-white border border-slate-200 group-hover:bg-slate-100 group-hover:border-slate-300 transition-colors shadow-sm" />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Panel */}
-      <div className="relative flex-1 min-w-0">
-        <Provider
-          config={config || undefined}
-          onError={handleRenderError}
-        >
-          <PlaygroundCanvas />
-        </Provider>
-        {!isRendered && (
-          <div className="absolute top-2.5 left-2.5 z-30">
-            <IconButton
-              size="lg"
-              icon={PanelRightClose}
-              alt="Toggle Editor"
-              onClick={() => setIsRendered(!isRendered)}
-              title="Toggle Code Editor"
-              tooltipPosition="right"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
