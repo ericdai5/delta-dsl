@@ -44,7 +44,7 @@ const IconButton: React.FC<IconButtonProps> = ({
   const button = (
     <button
       onClick={onClick}
-      className={`${isActive ? "bg-slate-900 border-slate-900" : "bg-white border-slate-200"} border ${sizeClasses[size]} rounded-xl flex items-center justify-center shadow-sm hover:shadow-md ${isActive ? "hover:bg-slate-800" : "hover:bg-slate-50"} hover:scale-105 transition-all duration-100 ${className}`}
+      className={`${isActive ? "bg-slate-900 border-slate-900" : "bg-white border-slate-200"} border ${sizeClasses[size]} rounded flex items-center justify-center shadow-sm hover:shadow-md ${isActive ? "hover:bg-slate-800" : "hover:bg-slate-50"} hover:scale-105 transition-all duration-100 ${className}`}
       aria-label={alt}
     >
       {Icon ? (

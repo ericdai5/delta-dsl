@@ -27,30 +27,35 @@ const Toolbar = ({
 }: ToolbarProps) => {
   return (
     <div className="absolute right-4 top-4 z-20 flex flex-col gap-2">
-      <IconButton
-        size="lg"
-        icon={SquareStack}
-        alt="Node Visibility"
-        onClick={onToggleNodeVisibility}
-        title="Node Visibility"
-        isActive={isNodeVisibilityOpen}
-      />
-      <IconButton
-        size="lg"
-        icon={ListTree}
-        alt="Latex Tree"
-        onClick={onToggleTreeInspector}
-        title="Latex Tree"
-        isActive={isTreeInspectorOpen}
-      />
-      <IconButton
-        size="lg"
-        icon={Braces}
-        alt="Variable Editor"
-        onClick={onToggleVariables}
-        title="Variable Editor"
-        isActive={isVariablesOpen}
-      />
+      {/* Debugging views stay in local development only. */}
+      {import.meta.env.DEV && (
+        <>
+          <IconButton
+            size="lg"
+            icon={SquareStack}
+            alt="Node Visibility"
+            onClick={onToggleNodeVisibility}
+            title="Node Visibility"
+            isActive={isNodeVisibilityOpen}
+          />
+          <IconButton
+            size="lg"
+            icon={ListTree}
+            alt="Latex Tree"
+            onClick={onToggleTreeInspector}
+            title="Latex Tree"
+            isActive={isTreeInspectorOpen}
+          />
+          <IconButton
+            size="lg"
+            icon={Braces}
+            alt="Variable Editor"
+            onClick={onToggleVariables}
+            title="Variable Editor"
+            isActive={isVariablesOpen}
+          />
+        </>
+      )}
       {showInterpreterButton && (
         <IconButton
           size="lg"

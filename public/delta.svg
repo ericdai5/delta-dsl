@@ -1,0 +1,19 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="8" y="8" width="584" height="584" rx="116" fill="url(#paint0_radial_240_49)"/>
+<rect x="8" y="8" width="584" height="584" rx="116" stroke="url(#paint1_linear_240_49)" stroke-width="16"/>
+<path d="M284.277 118.045H317.07L485.303 474.5H116.943L284.277 118.045ZM277.988 200.701L175.342 420.594H375.469L277.988 200.701Z" fill="url(#paint2_linear_240_49)"/>
+<defs>
+<radialGradient id="paint0_radial_240_49" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(300) rotate(90) scale(600)">
+<stop stop-color="#454A58"/>
+<stop offset="1" stop-color="#171B23"/>
+</radialGradient>
+<linearGradient id="paint1_linear_240_49" x1="300" y1="0" x2="300" y2="600" gradientUnits="userSpaceOnUse">
+<stop stop-color="#565D6C"/>
+<stop offset="1"/>
+</linearGradient>
+<linearGradient id="paint2_linear_240_49" x1="300" y1="127.5" x2="300" y2="472.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#CECECE"/>
+</linearGradient>
+</defs>
+</svg>

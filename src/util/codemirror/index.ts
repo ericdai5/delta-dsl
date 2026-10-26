@@ -36,7 +36,7 @@ export const CodeMirrorSetup = {
  */
 export const CodeMirrorStyle = {
   fontSize: "14px",
-  fontFamily: "monospace",
+  fontFamily: '"Geist Mono", monospace',
   height: "100%",
   overflow: "auto" as const,
 };
