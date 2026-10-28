@@ -101,6 +101,11 @@ class ComputationStore {
   @observable
   accessor variableRolesChanged = 0;
 
+  // Counts finished formula renders. MathJax renders asynchronously, so the
+  // canvas watches this to measure variables once their new layout is final.
+  @observable
+  accessor formulaRenderCount = 0;
+
   // Centralized tracker for drag state - blocks hover activation while dragging
   @observable
   accessor isDragging = false;
@@ -895,6 +900,11 @@ class ComputationStore {
   @action
   setVariableRolesChanged(value: number) {
     this.variableRolesChanged = value;
+  }
+
+  @action
+  markFormulaRendered() {
+    this.formulaRenderCount++;
   }
 
   @action

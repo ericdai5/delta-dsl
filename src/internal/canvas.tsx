@@ -88,8 +88,8 @@ const CanvasFlow = observer(
     // Once the reader drags a node, keep their arrangement
     const userArrangedRef = useRef(false);
 
-    // Label nodes are added shortly after variable nodes, and the first
-    // layout waits for them
+    // Label nodes are added shortly after variable nodes, either by the
+    // bootstrap or by a step update, and the first layout waits for them
     const [labelsBootstrapped, setLabelsBootstrapped] = useState(false);
 
     // Track pending label update animation frame (outside useEffect for persistence)
@@ -303,12 +303,14 @@ const CanvasFlow = observer(
 
     // Function to update label nodes in place (used during step transitions)
     const updateLabelNodes = useCallback(() => {
-      return updateAllLabelNodesUtil({
+      const labelSetChanged = updateAllLabelNodesUtil({
         getNodes,
         getViewport,
         setNodes,
         computationStore,
       });
+      setLabelsBootstrapped(true);
+      return labelSetChanged;
     }, [getNodes, getViewport, setNodes, computationStore]);
 
     // Function to adjust label positions after they're rendered and measured
@@ -607,7 +609,8 @@ const CanvasFlow = observer(
       }
     }, [nodes, edges, createLabelVariableEdges, setEdges]);
 
-    // Update labels when step mode or active variables change
+    // Update labels when step mode or active variables change, or when a
+    // formula finishes rendering and its variables may have moved
     useEffect(() => {
       const disposer = reaction(
         () => ({
@@ -619,9 +622,19 @@ const CanvasFlow = observer(
           ).map(([formulaId, varSet]) => [formulaId, Array.from(varSet)]),
           currentStep: computationStore.currentStep,
           stepIndex: computationStore.currentStepIndex,
+          formulaRenderCount: computationStore.formulaRenderCount,
         }),
         () => {
-          if (nodesInitialized && bootstrapCompleteRef.current) {
+          // Once the first labels are added, handle every step even while
+          // some nodes are unmeasured. A label added for one step renders
+          // nothing, so it is never measured, if the reader moves on to a
+          // step where its variable is inactive. Only this pass removes it,
+          // so waiting for every node to be measured would freeze the
+          // walkthrough.
+          if (
+            (nodesInitialized || labelsBootstrapped) &&
+            bootstrapCompleteRef.current
+          ) {
             // Cancel any pending animation frames
             if (labelUpdateFrameRef.current) {
               cancelAnimationFrame(labelUpdateFrameRef.current);
@@ -665,6 +678,7 @@ const CanvasFlow = observer(
       };
     }, [
       nodesInitialized,
+      labelsBootstrapped,
       updateLabelNodes,
       addstepNodes,
       updateVariableNodes,
