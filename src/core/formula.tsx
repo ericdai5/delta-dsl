@@ -473,7 +473,13 @@ const FormulaCanvasInner = observer(
           stepIndex: computationStore.currentStepIndex,
         }),
         () => {
-          if (nodesInitialized && bootstrapCompleteRef.current) {
+          // The bootstrap adds the first labels, so after it, handle every
+          // step even while some nodes are unmeasured. A label added for one
+          // step renders nothing, so it is never measured, if the reader
+          // moves on to a step where its variable is inactive. Only this
+          // pass removes it, so waiting for every node to be measured would
+          // freeze the walkthrough.
+          if (bootstrapCompleteRef.current) {
             if (initialFitViewCalledRef.current) {
               pendingStepFitRef.current = true;
             }

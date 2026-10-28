@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+import { type MutableRefObject, useCallback } from "react";
 
 import { Node, useReactFlow } from "@xyflow/react";
 
@@ -365,7 +365,9 @@ export function addVariableNodesForFormula({
 }
 
 /**
- * Hook to get a function that adds variable nodes for all formulas
+ * Hook to get a function that adds variable nodes for all formulas. The
+ * function keeps its identity between renders, so effects that depend on it
+ * don't re-run on every render.
  */
 export const useAddVariableNodes = ({
   nodesInitialized,
@@ -383,7 +385,7 @@ export const useAddVariableNodes = ({
   computationStore: ComputationStore;
 }) => {
   const { getNodes, getViewport } = useReactFlow();
-  return () => {
+  return useCallback(() => {
     // Formula-only config: skip variable-node creation entirely.
     if (computationStore.variables.size === 0) {
       bootstrapCompleteRef.current = true;
@@ -417,11 +419,22 @@ export const useAddVariableNodes = ({
         }, 100);
       }
     );
-  };
+  }, [
+    getNodes,
+    getViewport,
+    nodesInitialized,
+    setNodes,
+    addLabelNodes,
+    addstepNodes,
+    bootstrapCompleteRef,
+    computationStore,
+  ]);
 };
 
 /**
- * Hook to get a function that updates variable nodes or adds new ones
+ * Hook to get a function that updates variable nodes or adds new ones. The
+ * function keeps its identity between renders, so effects that depend on it
+ * don't re-run on every render.
  */
 export const useUpdateVariableNodes = ({
   nodesInitialized,
@@ -435,7 +448,7 @@ export const useUpdateVariableNodes = ({
   computationStore: ComputationStore;
 }) => {
   const { getNodes, getViewport } = useReactFlow();
-  return () => {
+  return useCallback(() => {
     withVarNodeContext(
       getNodes,
       getViewport,
@@ -475,5 +488,12 @@ export const useUpdateVariableNodes = ({
         }
       }
     );
-  };
+  }, [
+    getNodes,
+    getViewport,
+    nodesInitialized,
+    setNodes,
+    bootstrapCompleteRef,
+    computationStore,
+  ]);
 };

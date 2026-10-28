@@ -688,14 +688,19 @@ export const addLabelNodes = ({
     variableNodeUpdates.push(...formulaUpdates);
   });
 
-  // Add label nodes and update variable nodes with correct placement info
+  // Add label nodes and update variable nodes with correct placement info.
+  // A step update may have added some of these labels already.
   if (labelNodes.length > 0 || variableNodeUpdates.length > 0) {
     setNodes((currentNodes) => {
       const updatedNodes = updateLabelPlacement(
         currentNodes,
         variableNodeUpdates
       );
-      return [...updatedNodes, ...labelNodes];
+      const existingIds = new Set(currentNodes.map((node) => node.id));
+      return [
+        ...updatedNodes,
+        ...labelNodes.filter((node) => !existingIds.has(node.id)),
+      ];
     });
   }
 };

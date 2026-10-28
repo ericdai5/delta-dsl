@@ -21,6 +21,11 @@ const ExamplesPage = () => (
           margins center the grid in the page, and still let it scroll from
           the top when it is taller than the window. */}
       <div className="m-auto grid w-full max-w-[1376px] grid-cols-[repeat(auto-fill,320px)] justify-center gap-4 p-6">
+        {/* The prompt spans every column, so it stays centered over the cards
+            at any width. Its 16px bottom margin adds to the 16px grid gap. */}
+        <p className="col-span-full mb-4 text-center text-base text-slate-500">
+          Select an example to load in the playground.
+        </p>
         {publicExampleKeys.map((key) => (
           <Link
             key={key}

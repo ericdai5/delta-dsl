@@ -265,11 +265,15 @@ export function checkAllNodesMeasured(nodes: Node[]): {
  * Position step nodes to avoid label collisions and make them visible
  * @param currentNodes - Current array of nodes
  * @param formulaNode - The parent formula node
+ * @param getLaneTop - Optional top of the space reserved above a formula,
+ *   keyed by its node ID. Step nodes go no lower than this, so descriptions
+ *   stay on one row from step to step.
  * @returns Updated array of nodes with positioned and visible step nodes
  */
 export function positionAndShowstepNodes(
   currentNodes: Node[],
-  formulaNode: Node
+  formulaNode: Node,
+  getLaneTop?: (formulaNodeId: string) => number | undefined
 ): Node[] {
   return currentNodes.map((node) => {
     if (node.type === NODE_TYPES.STEP) {
@@ -278,13 +282,18 @@ export function positionAndShowstepNodes(
       const stepNodeHeight =
         node.measured?.height || node.height || DEFAULT_STEP_NODE_HEIGHT;
 
-      // Calculate Y position that avoids label collisions
-      const newY = getStepNodeYPositionAvoidingLabels(
-        currentNodes,
-        formulaNode,
-        viewCenterX,
-        25,
-        stepNodeHeight
+      // Calculate Y position that avoids label collisions. Placing it
+      // higher, at the reserved lane, only adds space below it.
+      const laneTop = node.parentId ? getLaneTop?.(node.parentId) : undefined;
+      const newY = Math.min(
+        getStepNodeYPositionAvoidingLabels(
+          currentNodes,
+          formulaNode,
+          viewCenterX,
+          25,
+          stepNodeHeight
+        ),
+        laneTop ?? Infinity
       );
 
       return {

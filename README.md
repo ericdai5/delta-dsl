@@ -6,6 +6,9 @@ them with step-by-step walkthroughs, and link manipulation across formulas,
 text, and visuals. Delta integrates with LaTeX math in web-based writing
 contexts, while its runtime handles state management.
 
+The [Delta website](https://www.pennhci.com/delta/) has the paper, a demo
+video, documentation, and the Playground.
+
 The npm package is
 [`delta-dsl`](https://www.npmjs.com/package/delta-dsl).
 

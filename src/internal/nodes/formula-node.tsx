@@ -61,6 +61,8 @@ const FormulaNode = observer(({ data }: { data: FormulaNodeData }) => {
         VAR_SELECTORS.ALL
         // computationStore.highlightedVarIds
       );
+      // Variables may have moved; let the canvas measure them again
+      computationStore.markFormulaRendered();
     }
   }, [data, computationStore, isInitialized]);
 

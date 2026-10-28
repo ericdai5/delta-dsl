@@ -27,10 +27,22 @@ import {
   updateAllLabelNodes as updateAllLabelNodesUtil,
 } from "../util/canvas/label-node";
 import {
+  IExtent,
+  IPosition,
+  areFormulasTypeset,
+  collectLayoutBlocks,
+  computeCanvasLayout,
+  isLayoutCrowded,
+  keepInPlace,
+  reserveExtents,
+  withFormulaAnchors,
+} from "../util/canvas/layout";
+import {
   NODE_TYPES,
   checkAllNodesMeasured,
   getFormulaNodes,
   getLabelNodes,
+  getVariableNodes,
   positionAndShowstepNodes,
 } from "../util/canvas/node-helpers";
 import { addstepNodes as addstepNodesUtil } from "../util/canvas/step-node";
@@ -51,12 +63,6 @@ interface CanvasProps {
 const BAYES_EXAMPLE_ID = "bayesWithCustomVisualization";
 const BAYES_FORMULA_ID = "bayes-theorem";
 
-// Space between the widest formula and the graphs placed beside it.
-const VISUALIZATION_GAP = 80;
-
-const isVisualizationNode = (node: Node) =>
-  node.type === "graph" || node.id === "bayes-chart";
-
 const CanvasFlow = observer(
   ({ controls, environment, computationStore }: CanvasProps) => {
     // Toggle state for showing all drag handles
@@ -72,8 +78,19 @@ const CanvasFlow = observer(
     // Track if initial fitView has been called to prevent re-fitting on every render
     const initialFitViewCalledRef = useRef(false);
 
-    // Track if graphs have been placed beside the measured formulas
-    const visualizationsPlacedRef = useRef(false);
+    // Track if the top-level nodes have been arranged since they were created
+    const layoutAppliedRef = useRef(false);
+
+    // Largest extent each top-level node has had, so the space reserved for
+    // labels never shrinks while stepping through a walkthrough
+    const reservedExtentsRef = useRef(new Map<string, IExtent>());
+
+    // Once the reader drags a node, keep their arrangement
+    const userArrangedRef = useRef(false);
+
+    // Label nodes are added shortly after variable nodes, either by the
+    // bootstrap or by a step update, and the first layout waits for them
+    const [labelsBootstrapped, setLabelsBootstrapped] = useState(false);
 
     // Track pending label update animation frame (outside useEffect for persistence)
     const labelUpdateFrameRef = useRef<number | null>(null);
@@ -137,12 +154,19 @@ const CanvasFlow = observer(
       [shouldLabelBeVisible]
     );
 
-    // Enhanced onNodesChange that triggers edge updates when nodes move
+    // Enhanced onNodesChange that remembers when the reader moves a node
     const handleNodesChange = useCallback(
       (changes: NodeChange[]) => {
+        if (
+          changes.some(
+            (change) => change.type === "position" && change.dragging
+          )
+        ) {
+          userArrangedRef.current = true;
+        }
         onNodesChange(changes);
       },
-      [onNodesChange, getNodes]
+      [onNodesChange]
     );
 
     // Create nodes from formulas and controls
@@ -274,16 +298,19 @@ const CanvasFlow = observer(
         setNodes,
         computationStore,
       });
+      setLabelsBootstrapped(true);
     }, [getNodes, getViewport, setNodes, computationStore]);
 
     // Function to update label nodes in place (used during step transitions)
     const updateLabelNodes = useCallback(() => {
-      return updateAllLabelNodesUtil({
+      const labelSetChanged = updateAllLabelNodesUtil({
         getNodes,
         getViewport,
         setNodes,
         computationStore,
       });
+      setLabelsBootstrapped(true);
+      return labelSetChanged;
     }, [getNodes, getViewport, setNodes, computationStore]);
 
     // Function to adjust label positions after they're rendered and measured
@@ -314,25 +341,29 @@ const CanvasFlow = observer(
 
     // Update nodes when formulas or controls change
     useEffect(() => {
+      const resetNodes = () => {
+        // New nodes are measured, bootstrapped and arranged from scratch
+        bootstrapCompleteRef.current = false;
+        layoutAppliedRef.current = false;
+        initialFitViewCalledRef.current = false;
+        userArrangedRef.current = false;
+        reservedExtentsRef.current = new Map();
+        setLabelsBootstrapped(false);
+        // Clear manually positioned labels when formulas change
+        setNodes(createNodes());
+        setEdges([]); // Clear edges when nodes are reset
+        // Variable nodes will be added when nodes are initialized
+      };
       const disposer = reaction(
         () => ({
           formulas: computationStore.formulas.map((f) => f.latex),
           controls: controls,
         }),
-        () => {
-          // Reset bootstrap completion when formulas change
-          bootstrapCompleteRef.current = false;
-          // Clear manually positioned labels when formulas change
-          setNodes(createNodes());
-          setEdges([]); // Clear edges when nodes are reset
-          // Variable nodes will be added when nodes are initialized
-        }
+        resetNodes
       );
 
       // Initial setup
-      bootstrapCompleteRef.current = false;
-      setNodes(createNodes());
-      setEdges([]); // Clear edges on initial setup
+      resetNodes();
 
       return () => {
         disposer();
@@ -350,51 +381,85 @@ const CanvasFlow = observer(
       }
     }, [nodesInitialized, nodes, addVariableNodes, computationStore]);
 
-    // Fit view after all nodes are properly loaded and positioned (only on initial load)
+    // Arrange the top-level nodes once their labels and step descriptions are
+    // placed, then fit the view (only on initial load). After that, arrange
+    // them again only when a step's labels crowd a neighboring node.
+    // reserveExtents keeps that space for every later step, so the formulas
+    // stay put as the reader steps back and forth.
     useEffect(() => {
+      if (!nodesInitialized || nodes.length === 0) return;
+      // Wait until variable-node bootstrap has completed (including zero-variable configs).
+      if (!bootstrapCompleteRef.current) return;
+      // Labels are added shortly after the variable nodes, hidden until positioned
+      if (!labelsBootstrapped && getVariableNodes(nodes).length > 0) return;
+      if (getLabelNodes(nodes).some((node) => node.style?.opacity === 0)) {
+        return;
+      }
+      if (!areFormulasTypeset(nodes)) return;
+
+      const isFirstLayout = !layoutAppliedRef.current;
       if (
-        nodesInitialized &&
-        nodes.length > 0 &&
-        !initialFitViewCalledRef.current
+        isFirstLayout ||
+        (!userArrangedRef.current && !computationStore.isDragging)
       ) {
-        // Wait until variable-node bootstrap has completed (including zero-variable configs).
-        if (bootstrapCompleteRef.current) {
-          // Before the first fit, move graphs a fixed gap right of the widest
-          // formula, so narrow formulas don't leave a wide empty space and wide
-          // ones don't overlap their graphs.
-          if (!visualizationsPlacedRef.current) {
-            visualizationsPlacedRef.current = true;
-            const formulaRight = Math.max(
-              ...getFormulaNodes(nodes).map(
-                (node) => node.position.x + (node.measured?.width ?? 0)
-              )
-            );
-            if (
-              Number.isFinite(formulaRight) &&
-              nodes.some(isVisualizationNode)
-            ) {
-              setNodes((currentNodes) =>
-                currentNodes.map((node) =>
-                  isVisualizationNode(node)
-                    ? {
-                        ...node,
-                        position: {
-                          ...node.position,
-                          x: formulaRight + VISUALIZATION_GAP,
-                        },
-                      }
-                    : node
-                )
-              );
-              // The fit runs on the next render, after the move.
-              return;
-            }
+        const blocks = collectLayoutBlocks(nodes);
+        if (!blocks) return;
+        const reservedBlocks = reserveExtents(
+          blocks,
+          reservedExtentsRef.current
+        );
+        const currentPositions = new Map<string, IPosition>(
+          nodes
+            .filter((node) => !node.parentId)
+            .map((node) => [node.id, node.position])
+        );
+        if (isFirstLayout || isLayoutCrowded(blocks, currentPositions)) {
+          let positions = computeCanvasLayout(
+            withFormulaAnchors(reservedBlocks, nodes, getViewport().zoom)
+          );
+          // Keep the top of the formula column, such as the walkthrough
+          // controls the reader is clicking, where it was
+          const anchor = blocks.controls[0] ?? blocks.formulas[0];
+          const anchorPosition = anchor && currentPositions.get(anchor.id);
+          if (!isFirstLayout && anchorPosition) {
+            positions = keepInPlace(positions, anchor.id, anchorPosition);
           }
-          fitView({ duration: 300, padding: 0.2 });
-          initialFitViewCalledRef.current = true;
+          layoutAppliedRef.current = true;
+          const moved = nodes.some((node) => {
+            const position = positions.get(node.id);
+            return (
+              position &&
+              (position.x !== node.position.x || position.y !== node.position.y)
+            );
+          });
+          if (moved) {
+            setNodes((currentNodes) =>
+              currentNodes.map((node) => {
+                const position = positions.get(node.id);
+                return position ? { ...node, position } : node;
+              })
+            );
+            // The fit runs on the next render, after the move.
+            return;
+          }
         }
       }
-    }, [nodesInitialized, nodes, fitView, setNodes]);
+
+      if (!initialFitViewCalledRef.current) {
+        // Like fitViewOptions, never zoom past 100%, so a single short formula
+        // isn't blown up to fill the canvas.
+        fitView({ duration: 300, padding: 0.2, maxZoom: 1 });
+        initialFitViewCalledRef.current = true;
+      }
+    }, [
+      nodesInitialized,
+      nodes,
+      labelsBootstrapped,
+      fitView,
+      getViewport,
+      setNodes,
+      computationStore,
+    ]);
 
     // Re-add variable nodes when computation store variables change
     useEffect(() => {
@@ -544,7 +609,8 @@ const CanvasFlow = observer(
       }
     }, [nodes, edges, createLabelVariableEdges, setEdges]);
 
-    // Update labels when step mode or active variables change
+    // Update labels when step mode or active variables change, or when a
+    // formula finishes rendering and its variables may have moved
     useEffect(() => {
       const disposer = reaction(
         () => ({
@@ -556,9 +622,19 @@ const CanvasFlow = observer(
           ).map(([formulaId, varSet]) => [formulaId, Array.from(varSet)]),
           currentStep: computationStore.currentStep,
           stepIndex: computationStore.currentStepIndex,
+          formulaRenderCount: computationStore.formulaRenderCount,
         }),
         () => {
-          if (nodesInitialized && bootstrapCompleteRef.current) {
+          // Once the first labels are added, handle every step even while
+          // some nodes are unmeasured. A label added for one step renders
+          // nothing, so it is never measured, if the reader moves on to a
+          // step where its variable is inactive. Only this pass removes it,
+          // so waiting for every node to be measured would freeze the
+          // walkthrough.
+          if (
+            (nodesInitialized || labelsBootstrapped) &&
+            bootstrapCompleteRef.current
+          ) {
             // Cancel any pending animation frames
             if (labelUpdateFrameRef.current) {
               cancelAnimationFrame(labelUpdateFrameRef.current);
@@ -602,6 +678,7 @@ const CanvasFlow = observer(
       };
     }, [
       nodesInitialized,
+      labelsBootstrapped,
       updateLabelNodes,
       addstepNodes,
       updateVariableNodes,
@@ -655,7 +732,12 @@ const CanvasFlow = observer(
 
             if (formulaNode) {
               setNodes((currentNodes) =>
-                positionAndShowstepNodes(currentNodes, formulaNode)
+                positionAndShowstepNodes(
+                  currentNodes,
+                  formulaNode,
+                  (formulaNodeId) =>
+                    reservedExtentsRef.current.get(formulaNodeId)?.top
+                )
               );
             }
           }
