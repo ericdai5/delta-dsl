@@ -25,37 +25,36 @@ const Toolbar = ({
   isVariablesOpen = false,
   showInterpreterButton = false,
 }: ToolbarProps) => {
+  // Every button opens a debugging view, so the toolbar stays in local
+  // development only.
+  if (!import.meta.env.DEV) return null;
+
   return (
     <div className="absolute right-4 top-4 z-20 flex flex-col gap-2">
-      {/* Debugging views stay in local development only. */}
-      {import.meta.env.DEV && (
-        <>
-          <IconButton
-            size="lg"
-            icon={SquareStack}
-            alt="Node Visibility"
-            onClick={onToggleNodeVisibility}
-            title="Node Visibility"
-            isActive={isNodeVisibilityOpen}
-          />
-          <IconButton
-            size="lg"
-            icon={ListTree}
-            alt="Latex Tree"
-            onClick={onToggleTreeInspector}
-            title="Latex Tree"
-            isActive={isTreeInspectorOpen}
-          />
-          <IconButton
-            size="lg"
-            icon={Braces}
-            alt="Variable Editor"
-            onClick={onToggleVariables}
-            title="Variable Editor"
-            isActive={isVariablesOpen}
-          />
-        </>
-      )}
+      <IconButton
+        size="lg"
+        icon={SquareStack}
+        alt="Node Visibility"
+        onClick={onToggleNodeVisibility}
+        title="Node Visibility"
+        isActive={isNodeVisibilityOpen}
+      />
+      <IconButton
+        size="lg"
+        icon={ListTree}
+        alt="Latex Tree"
+        onClick={onToggleTreeInspector}
+        title="Latex Tree"
+        isActive={isTreeInspectorOpen}
+      />
+      <IconButton
+        size="lg"
+        icon={Braces}
+        alt="Variable Editor"
+        onClick={onToggleVariables}
+        title="Variable Editor"
+        isActive={isVariablesOpen}
+      />
       {showInterpreterButton && (
         <IconButton
           size="lg"
