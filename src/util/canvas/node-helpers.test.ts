@@ -5,6 +5,7 @@ import {
   NODE_TYPES,
   findVariableNodesByVarId,
   findVariableNodesForFormulaNode,
+  positionAndShowstepNodes,
 } from "./node-helpers";
 
 const makeNode = (
@@ -88,5 +89,31 @@ describe("variable node finders", () => {
       )
     ).toEqual(["v-1", "v-2-a", "v-2-b", "v-legacy"]);
     expect(findVariableNodesByVarId(nodes, "missing-formula", "v")).toEqual([]);
+  });
+});
+
+describe("positionAndShowstepNodes", () => {
+  const stepNode: Node = {
+    ...makeNode("step-0", NODE_TYPES.STEP, {}, formulaNode.id),
+    measured: { width: 200, height: 24 },
+    style: { opacity: 0 },
+  };
+  const stepY = (laneTop?: number) =>
+    positionAndShowstepNodes(
+      [formulaNode, stepNode],
+      formulaNode,
+      laneTop === undefined ? undefined : () => laneTop
+    ).find((node) => node.id === "step-0")!.position.y;
+
+  it("places a description just above an unlabeled formula", () => {
+    expect(stepY()).toBe(-25 - 24);
+  });
+
+  it("raises a description to the reserved lane", () => {
+    expect(stepY(-80)).toBe(-80);
+  });
+
+  it("never lowers a description into the labels below the lane", () => {
+    expect(stepY(-20)).toBe(-25 - 24);
   });
 });
