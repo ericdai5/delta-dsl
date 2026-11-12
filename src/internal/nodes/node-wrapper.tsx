@@ -10,12 +10,12 @@ interface NodeWrapperProps {
 
 /**
  * Wrapper component for rendering components inside the React Flow canvas.
- * Adds a draggable handle at the top and nodrag class to prevent dragging on interactive elements.
+ * Adds a drag handle at the top, shown in move mode, and the nodrag class to prevent dragging on interactive elements.
  */
 export const NodeWrapper = ({ children }: NodeWrapperProps) => {
   return (
     <div className="group">
-      <div className="flex justify-center cursor-move py-1 text-slate-400 hover:text-slate-600 opacity-0 transition-opacity duration-200">
+      <div className="control-drag-handle flex justify-center cursor-move py-1 text-slate-400 hover:text-slate-600 opacity-0 transition-opacity duration-200">
         <GripHorizontal size={16} />
       </div>
       <div className="nodrag">{children}</div>

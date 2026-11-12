@@ -183,7 +183,10 @@ const CanvasFlow = observer(
           type: "interpreterControl",
           position: { x: 600, y: currentY },
           data: { environment },
-          draggable: true,
+          dragHandle: ".control-drag-handle",
+          style: {
+            cursor: "default",
+          },
         });
         currentY += 80; // Add space after interpreter controls
       }
@@ -196,7 +199,10 @@ const CanvasFlow = observer(
             type: "control",
             position: { x: 250, y: currentY },
             data: { control },
-            draggable: true,
+            dragHandle: ".control-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           currentY += 100; // Add space after each control
         });
@@ -222,7 +228,6 @@ const CanvasFlow = observer(
             computationStore,
           },
           dragHandle: ".formula-drag-handle",
-          draggable: true,
           style: {
             cursor: "default",
           },
@@ -242,8 +247,10 @@ const CanvasFlow = observer(
             type: "graph",
             position: { x: 800, y: vizY },
             data: { graphId: plot.id },
-            draggable: true,
             dragHandle: ".visualization-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           vizY += 300;
         });
@@ -253,8 +260,10 @@ const CanvasFlow = observer(
             type: "graph",
             position: { x: 800, y: vizY },
             data: { graphId: plot.id },
-            draggable: true,
             dragHandle: ".visualization-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           vizY += 300;
         });
@@ -271,8 +280,10 @@ const CanvasFlow = observer(
           type: "emptyNode",
           position: { x: 800, y: vizY },
           data: { component: BayesProbabilityChart },
-          draggable: true,
           dragHandle: ".empty-node-drag-handle",
+          style: {
+            cursor: "default",
+          },
         });
       }
 
@@ -781,6 +792,8 @@ const CanvasFlow = observer(
           zoomOnPinch={true}
           zoomOnDoubleClick={false}
           panOnDrag={false}
+          // Nodes can be dragged, by their handles, only in move mode
+          nodesDraggable={showGrips}
           selectNodesOnDrag={false}
           preventScrolling={false}
           autoPanOnNodeDrag={false}

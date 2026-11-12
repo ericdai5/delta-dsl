@@ -145,11 +145,38 @@
     scrollbar-width: none; /* Firefox */
   }
 
+  /* Drag handles stay hidden, and can't be grabbed, until move mode is on */
+  .formula-drag-handle,
+  .control-drag-handle,
+  .visualization-drag-handle,
+  .empty-node-drag-handle {
+    pointer-events: none;
+  }
+
   /* Show all drag handles when move mode is active */
   .show-grips .formula-drag-handle,
   .show-grips .control-drag-handle,
   .show-grips .visualization-drag-handle,
   .show-grips .empty-node-drag-handle {
     opacity: 1 !important;
+    pointer-events: auto;
+  }
+
+  /* Graphs, and each formula with its labels, are outlined only in move mode,
+     fading in with the drag handles */
+  .formula-group-outline {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .formula-group-outline,
+  .visualization-node {
+    outline: 1px solid transparent;
+    transition: outline-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .show-grips .formula-group-outline,
+  .show-grips .visualization-node {
+    outline-color: theme("colors.slate.300");
   }
 }
