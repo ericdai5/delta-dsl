@@ -14,6 +14,8 @@ interface ProviderProps {
   children: React.ReactNode;
   onError?: (error: string | null) => void;
   onReady?: (instance: Instance) => void;
+  // Shown while MathJax loads, in place of the default message
+  loadingFallback?: React.ReactNode;
 }
 
 // Inner provider that runs after MathJax is loaded
@@ -150,9 +152,12 @@ const ProviderInner: React.FC<ProviderProps> = observer(
 );
 
 // Outer provider that ensures MathJax is loaded first
-export const Provider: React.FC<ProviderProps> = (props) => {
+export const Provider: React.FC<ProviderProps> = ({
+  loadingFallback,
+  ...props
+}) => {
   return (
-    <MathJaxLoader>
+    <MathJaxLoader fallback={loadingFallback}>
       <ProviderInner {...props} />
     </MathJaxLoader>
   );

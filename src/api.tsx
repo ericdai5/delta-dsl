@@ -9,6 +9,7 @@ import { Provider } from "./core";
 import { examples as formulaExamples } from "./examples";
 import { Config } from "./formulize";
 import Editor from "./internal/api-code-editor";
+import CanvasLoader from "./internal/canvas-loader";
 import PlaygroundCanvas from "./internal/playground";
 import PlaygroundBreadcrumb from "./internal/playground-breadcrumb";
 import { debugStore } from "./store/debug";
@@ -49,6 +50,8 @@ const APIPage = observer(() => {
   const [isRendered, setIsRendered] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
+  // Whether the canvas is showing the current config, laid out
+  const [canvasReady, setCanvasReady] = useState(false);
   const [editorWidth, setEditorWidth] = useState(400);
   const containerRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -194,9 +197,16 @@ const APIPage = observer(() => {
 
         {/* Main Content Panel */}
         <div className="relative flex-1 min-w-0">
-          <Provider config={config || undefined} onError={handleRenderError}>
-            <PlaygroundCanvas />
+          <Provider
+            config={config || undefined}
+            onError={handleRenderError}
+            loadingFallback={null}
+          >
+            <PlaygroundCanvas onReadyChange={setCanvasReady} />
           </Provider>
+          {/* One loader covers every stage: MathJax loading, the store being
+              created and the canvas laying itself out */}
+          <CanvasLoader active={!!config && !error && !canvasReady} />
           {/* Editor controls sit just outside the code panel, against its
               right border, so they never cover the code. */}
           <div className="absolute top-2.5 left-2.5 z-30 flex flex-col gap-2">

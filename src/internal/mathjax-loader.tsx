@@ -17,8 +17,15 @@ export const MathJaxContext = createContext<MathJaxContextType>({
   MathJax: null,
 });
 
-export const MathJaxLoader: React.FC<{ children: React.ReactNode }> = ({
+interface IMathJaxLoaderProps {
+  children: React.ReactNode;
+  // Shown while MathJax loads, in place of the default message
+  fallback?: React.ReactNode;
+}
+
+export const MathJaxLoader: React.FC<IMathJaxLoaderProps> = ({
   children,
+  fallback,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const loadingRef = useRef(false);
@@ -156,6 +163,9 @@ export const MathJaxLoader: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   if (!isLoaded) {
+    if (fallback !== undefined) {
+      return <>{fallback}</>;
+    }
     return (
       <div style={{ padding: "20px", textAlign: "center" }}>
         Loading mathematical notation...

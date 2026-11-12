@@ -145,6 +145,16 @@
     scrollbar-width: none; /* Firefox */
   }
 
+  /* The canvas's items stay hidden until they are first arranged and fitted,
+     so they never show at their starting positions, then fade in */
+  .canvas-pending .react-flow__viewport {
+    opacity: 0;
+  }
+
+  .canvas-revealed .react-flow__viewport {
+    transition: opacity 200ms ease-out;
+  }
+
   /* Drag handles stay hidden, and can't be grabbed, until move mode is on */
   .formula-drag-handle,
   .control-drag-handle,
