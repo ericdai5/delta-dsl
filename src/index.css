@@ -179,6 +179,15 @@
     transition: opacity 200ms ease-out;
   }
 
+  /* The playground canvas gets a layer of its own. Without one, Safari can
+     turn the zoomed viewport into a bitmap layer when its content reaches
+     past the canvas's edge, over a scrolling panel beside it, and the zoom
+     then scales that bitmap and blurs the math. */
+  .canvas-pending .react-flow,
+  .canvas-revealed .react-flow {
+    will-change: transform;
+  }
+
   /* Drag handles stay hidden, and can't be grabbed, until move mode is on */
   .formula-drag-handle,
   .control-drag-handle,
