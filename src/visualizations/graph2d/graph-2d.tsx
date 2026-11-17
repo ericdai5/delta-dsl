@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -51,7 +51,9 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
   const computationStore = context?.computationStore;
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const axisLabelInfoRef = useRef<AxisLabelInfo>({});
+  // Where the axis labels go. The plot is drawn in an effect, after the first
+  // render, so this is state: setting it renders the labels the draw placed.
+  const [axisLabelInfo, setAxisLabelInfo] = useState<AxisLabelInfo>({});
   // Track if drag is happening on THIS plot (to distinguish from formula variable drag)
   const isLocalDragRef = useRef(false);
   // Track focus state for graph interaction (persists across re-renders)
@@ -225,8 +227,12 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
       allYVariables: vectorVars.allYVariables,
     });
 
-    // Store label info in ref for React rendering
-    axisLabelInfoRef.current = labelInfo;
+    // Hand the labels to React to render, unless this draw left them as they were
+    setAxisLabelInfo((current) =>
+      JSON.stringify(current) === JSON.stringify(labelInfo)
+        ? current
+        : labelInfo
+    );
 
     // Add grid using helper function
     addGrid(svg, {
@@ -1769,18 +1775,18 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
         }}
       />
       <AxisLabels
-        labelInfo={axisLabelInfoRef.current}
+        labelInfo={axisLabelInfo}
         xAxisHovered={
           xAxisVar
             ? computationStore.isVariableHighlighted(xAxisVar)
-            : axisLabelInfoRef.current.xLabel?.allXVariables.some((varId) =>
+            : axisLabelInfo.xLabel?.allXVariables.some((varId) =>
                 computationStore.isVariableHighlighted(varId)
               ) || false
         }
         yAxisHovered={
           yAxisVar
             ? computationStore.isVariableHighlighted(yAxisVar)
-            : axisLabelInfoRef.current.yLabel?.allYVariables.some((varId) =>
+            : axisLabelInfo.yLabel?.allYVariables.some((varId) =>
                 computationStore.isVariableHighlighted(varId)
               ) || false
         }
