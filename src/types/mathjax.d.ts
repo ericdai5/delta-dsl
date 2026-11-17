@@ -30,11 +30,22 @@ declare global {
           "[+]": string[];
         };
       };
+      output?: {
+        font?: string;
+        scale?: number;
+        linebreaks?: {
+          inline?: boolean;
+        };
+      };
       chtml?: {
         scale?: number;
       };
       options?: {
         enableMenu?: boolean;
+        enableExplorer?: boolean;
+        enableSpeech?: boolean;
+        enableBraille?: boolean;
+        enableEnrichment?: boolean;
         skipHtmlTags?: string[];
       };
 

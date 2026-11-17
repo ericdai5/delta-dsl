@@ -4,6 +4,12 @@ import { BrowserRouter } from "react-router-dom";
 
 import App from "./app.tsx";
 import "./index.css";
+import {
+  MATHJAX_DOCUMENT_OPTIONS,
+  MATHJAX_OUTPUT_OPTIONS,
+  MATHJAX_SCRIPT_INTEGRITY,
+  MATHJAX_SCRIPT_URL,
+} from "./internal/mathjax-config";
 
 // Only enable react-scan in development
 if (import.meta.env.DEV) {
@@ -33,9 +39,11 @@ const loadMathJax = () => {
       tex: {
         packages: { "[+]": ["html", "color", "cancel"] },
       },
-      chtml: {
+      output: {
+        ...MATHJAX_OUTPUT_OPTIONS,
         scale: 1.0,
       },
+      options: MATHJAX_DOCUMENT_OPTIONS,
       startup: {
         pageReady: () => {
           // @ts-expect-error MathJax startup types are incomplete
@@ -49,10 +57,8 @@ const loadMathJax = () => {
     };
 
     const script = document.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js";
-    script.integrity =
-      "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei";
+    script.src = MATHJAX_SCRIPT_URL;
+    script.integrity = MATHJAX_SCRIPT_INTEGRITY;
     script.crossOrigin = "anonymous";
     script.async = true;
     document.head.appendChild(script);

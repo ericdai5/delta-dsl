@@ -1,5 +1,12 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
 
+import {
+  MATHJAX_DOCUMENT_OPTIONS,
+  MATHJAX_OUTPUT_OPTIONS,
+  MATHJAX_SCRIPT_INTEGRITY,
+  MATHJAX_SCRIPT_URL,
+} from "./mathjax-config";
+
 declare global {
   interface Window {
     MathJax: any;
@@ -72,12 +79,14 @@ export const MathJaxLoader: React.FC<IMathJaxLoaderProps> = ({
               ["\\[", "\\]"],
             ],
           },
-          chtml: {
+          output: {
+            ...MATHJAX_OUTPUT_OPTIONS,
             scale: 1.0, // Base scale - components control their own sizing
             matchFontHeight: true, // Match surrounding text for inline use
             mtextInheritFont: false, // Use MathJax fonts
             merrorInheritFont: false, // Use MathJax fonts for errors
           },
+          options: MATHJAX_DOCUMENT_OPTIONS,
           startup: {
             ready: () => {
               window.MathJax.startup.defaultReady();
@@ -125,10 +134,8 @@ export const MathJaxLoader: React.FC<IMathJaxLoaderProps> = ({
           // Load MathJax script
           const script = document.createElement("script");
           script.id = "MathJax-script";
-          script.src =
-            "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js";
-          script.integrity =
-            "sha384-AHAnt9ZhGeHIrydA1Kp1L7FN+2UosbF7RQg6C+9Is/a7kDpQ1684C2iH2VWil6r4";
+          script.src = MATHJAX_SCRIPT_URL;
+          script.integrity = MATHJAX_SCRIPT_INTEGRITY;
           script.crossOrigin = "anonymous";
           script.async = true;
 
