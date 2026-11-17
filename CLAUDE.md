@@ -50,7 +50,7 @@ This is a **Formula Editor** built with React + TypeScript + Vite that provides 
 - **Frontend**: React 18 + TypeScript + Vite
 - **State Management**: MobX with decorators (using legacy mode)
 - **Styling**: Emotion CSS-in-JS + Tailwind CSS + Material-UI
-- **Math Rendering**: KaTeX, MathJax, better-react-mathjax
+- **Math Rendering**: KaTeX, MathJax
 - **Code Editor**: CodeMirror 6 with JavaScript language support
 - **Visualization**: D3.js, Plotly.js for 2D/3D plotting
 

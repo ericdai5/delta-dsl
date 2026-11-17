@@ -66,8 +66,6 @@ export default defineConfig({
         "d3",
         "@xyflow/react",
         // Math rendering
-        "mathjax-full",
-        "better-react-mathjax",
         "katex",
         "mathjs",
         // State management
@@ -98,13 +96,11 @@ export default defineConfig({
           "mobx-react-lite": "mobxReactLite",
           "mobx-state-tree": "mobxStateTree",
           katex: "katex",
-          "mathjax-full": "MathJax",
           "plotly.js-dist": "Plotly",
           d3: "d3",
           mathjs: "mathjs",
           codemirror: "CodeMirror",
           "@xyflow/react": "ReactFlow",
-          "better-react-mathjax": "BetterReactMathjax",
           "@codemirror/autocomplete": "CodeMirrorAutocomplete",
           "@codemirror/lang-javascript": "CodeMirrorLangJavascript",
           "@codemirror/language": "CodeMirrorLanguage",

@@ -10,6 +10,13 @@
   #root {
     @apply h-full w-full m-0 p-0 font-sans;
   }
+
+  /* A formula's line is as tall as its math and no taller. MathJax leaves
+     the line height to the page, which adds a few pixels above and below
+     every formula. */
+  mjx-container[jax="CHTML"] {
+    line-height: 0;
+  }
 }
 
 @layer components {
