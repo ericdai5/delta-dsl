@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* How much a variable grows when hovered or pulsed. The animations change
+   this number, not transform itself: Safari animates transform on a bitmap
+   copy of the variable, and making that copy blurs the canvas's math until
+   the animation ends. */
+@property --var-scale {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
 @layer base {
   html,
   body,
@@ -60,28 +70,30 @@
   }
 
   .var-scale-wrapper.active {
+    transform: scale(var(--var-scale, 1));
     animation: scale-in 0.2s ease-out forwards;
   }
 
   .var-scale-wrapper.scale-out {
+    transform: scale(var(--var-scale, 1));
     animation: scale-out 0.2s ease-out forwards;
   }
 
   @keyframes scale-in {
     from {
-      transform: scale(1);
+      --var-scale: 1;
     }
     to {
-      transform: scale(1.1);
+      --var-scale: 1.1;
     }
   }
 
   @keyframes scale-out {
     from {
-      transform: scale(1.1);
+      --var-scale: 1.1;
     }
     to {
-      transform: scale(1);
+      --var-scale: 1;
     }
   }
 
@@ -107,16 +119,21 @@
   .label-flow-node .var-input {
     line-height: 1.2;
     display: inline-block;
-    transition: transform 0.2s ease-out;
+    transform: scale(var(--var-scale, 1));
+    transition: --var-scale 0.2s ease-out;
   }
 
   .label-flow-node .var-base.hovered,
   .label-flow-node .var-input.hovered {
-    transform: scale(1.1);
+    --var-scale: 1.1;
   }
 
-  /* Step mode pulse animation - applied on top of var-base or var-input */
+  /* Step mode pulse animation - applied on top of var-base or var-input.
+     Only colors transition while it is on: a transition on transform would
+     chase the pulse's scale from frame to frame. */
   .step-cue {
+    @apply transition-colors duration-200;
+    transform: scale(var(--var-scale, 1));
     animation: pulseUpdate 0.4s ease-in-out;
   }
 
@@ -131,13 +148,13 @@
 
   @keyframes pulseUpdate {
     0% {
-      transform: scale(1);
+      --var-scale: 1;
     }
     50% {
-      transform: scale(1.05);
+      --var-scale: 1.05;
     }
     100% {
-      transform: scale(1);
+      --var-scale: 1;
     }
   }
 

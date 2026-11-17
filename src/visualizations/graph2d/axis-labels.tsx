@@ -12,6 +12,12 @@ interface AxisLabelsProps {
   yAxisHovered?: boolean;
 }
 
+// A hovered label grows through --var-scale (see index.css), not by
+// animating transform, which would blur the canvas's math in Safari
+const hoverScale = (hovered: boolean) =>
+  ({ "--var-scale": hovered ? 1.08 : 1 }) as React.CSSProperties;
+const HOVER_TRANSITION = "--var-scale 0.2s ease, color 0.2s ease";
+
 export const AxisLabels: React.FC<AxisLabelsProps> = observer(
   ({ labelInfo, xAxisHovered = false, yAxisHovered = false }) => {
     const context = useStore();
@@ -67,11 +73,12 @@ export const AxisLabels: React.FC<AxisLabelsProps> = observer(
               position: "absolute",
               left: `${labelInfo.xLabel.x}px`,
               top: `${labelInfo.xLabel.y}px`,
-              transform: `translate(-50%, -50%) scale(${xAxisHovered ? 1.08 : 1})`,
+              ...hoverScale(xAxisHovered),
+              transform: "translate(-50%, -50%) scale(var(--var-scale, 1))",
               cursor: "pointer",
               padding: "4px",
               color: xAxisHovered ? "#2563eb" : "#111827",
-              transition: "transform 0.2s ease, color 0.2s ease",
+              transition: HOVER_TRANSITION,
               transformOrigin: "center center",
             }}
             onMouseEnter={handleXLabelMouseEnter}
@@ -86,11 +93,12 @@ export const AxisLabels: React.FC<AxisLabelsProps> = observer(
               position: "absolute",
               left: `${labelInfo.yLabel.x}px`,
               top: `${labelInfo.yLabel.y}px`,
-              transform: `translate(-50%, -50%) rotate(${labelInfo.yLabel.rotation}deg) scale(${yAxisHovered ? 1.08 : 1})`,
+              ...hoverScale(yAxisHovered),
+              transform: `translate(-50%, -50%) rotate(${labelInfo.yLabel.rotation}deg) scale(var(--var-scale, 1))`,
               cursor: "pointer",
               padding: "4px",
               color: yAxisHovered ? "#2563eb" : "#111827",
-              transition: "transform 0.2s ease, color 0.2s ease",
+              transition: HOVER_TRANSITION,
               transformOrigin: "center center",
             }}
             onMouseEnter={handleYLabelMouseEnter}
