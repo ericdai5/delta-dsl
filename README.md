@@ -354,6 +354,15 @@ npm run build
 `prepublishOnly` runs tests, type checking, and the production build before
 publication.
 
+## Changes since the user studies
+
+The observational and controlled user studies in March 2026 used Delta as of
+commit
+[`c351764`](https://github.com/ericdai5/delta-dsl/tree/c351764dd7e0a7ef8ee0c8d7bc1a390988344150)
+(March 10, 2026). Every
+[later commit](https://github.com/ericdai5/delta-dsl/compare/c351764dd7e0a7ef8ee0c8d7bc1a390988344150...main)
+was made after the studies.
+
 ## License and support
 
 Delta is available under the [MIT License](./LICENSE).

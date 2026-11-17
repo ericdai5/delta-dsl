@@ -58,13 +58,18 @@ interface CanvasProps {
   controls?: IControls[];
   environment?: IEnvironment;
   computationStore: ComputationStore;
+  // Called once the canvas has arranged its items and is showing them
+  onRevealed?: () => void;
 }
 
 const BAYES_EXAMPLE_ID = "bayesWithCustomVisualization";
 const BAYES_FORMULA_ID = "bayes-theorem";
 
+// How long the canvas waits for its first layout before showing itself anyway
+const REVEAL_FALLBACK_MS = 2000;
+
 const CanvasFlow = observer(
-  ({ controls, environment, computationStore }: CanvasProps) => {
+  ({ controls, environment, computationStore, onRevealed }: CanvasProps) => {
     // Toggle state for showing all drag handles
     const [showGrips, setShowGrips] = useState(false);
     const toggleGrips = useCallback(() => setShowGrips((prev) => !prev), []);
@@ -77,6 +82,17 @@ const CanvasFlow = observer(
 
     // Track if initial fitView has been called to prevent re-fitting on every render
     const initialFitViewCalledRef = useRef(false);
+
+    // The canvas's items stay hidden until they are first arranged and fitted,
+    // so they never show at their starting positions
+    const [canvasRevealed, setCanvasRevealed] = useState(false);
+    const canvasRevealedRef = useRef(false);
+    const revealCanvas = useCallback(() => {
+      if (canvasRevealedRef.current) return;
+      canvasRevealedRef.current = true;
+      setCanvasRevealed(true);
+      onRevealed?.();
+    }, [onRevealed]);
 
     // Track if the top-level nodes have been arranged since they were created
     const layoutAppliedRef = useRef(false);
@@ -115,7 +131,9 @@ const CanvasFlow = observer(
     // Initialize React Flow state first
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const selectedTemplate = debugStore.selectedTemplate;
+    // The example this canvas was built for. Read once: when the reader picks
+    // another example, this canvas is replaced, and must not rebuild first.
+    const [selectedTemplate] = useState(() => debugStore.selectedTemplate);
 
     /**
      * Check if a label node should be visible based on the same logic as LabelNode component
@@ -183,7 +201,10 @@ const CanvasFlow = observer(
           type: "interpreterControl",
           position: { x: 600, y: currentY },
           data: { environment },
-          draggable: true,
+          dragHandle: ".control-drag-handle",
+          style: {
+            cursor: "default",
+          },
         });
         currentY += 80; // Add space after interpreter controls
       }
@@ -196,7 +217,10 @@ const CanvasFlow = observer(
             type: "control",
             position: { x: 250, y: currentY },
             data: { control },
-            draggable: true,
+            dragHandle: ".control-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           currentY += 100; // Add space after each control
         });
@@ -222,7 +246,6 @@ const CanvasFlow = observer(
             computationStore,
           },
           dragHandle: ".formula-drag-handle",
-          draggable: true,
           style: {
             cursor: "default",
           },
@@ -242,8 +265,10 @@ const CanvasFlow = observer(
             type: "graph",
             position: { x: 800, y: vizY },
             data: { graphId: plot.id },
-            draggable: true,
             dragHandle: ".visualization-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           vizY += 300;
         });
@@ -253,8 +278,10 @@ const CanvasFlow = observer(
             type: "graph",
             position: { x: 800, y: vizY },
             data: { graphId: plot.id },
-            draggable: true,
             dragHandle: ".visualization-drag-handle",
+            style: {
+              cursor: "default",
+            },
           });
           vizY += 300;
         });
@@ -271,8 +298,10 @@ const CanvasFlow = observer(
           type: "emptyNode",
           position: { x: 800, y: vizY },
           data: { component: BayesProbabilityChart },
-          draggable: true,
           dragHandle: ".empty-node-drag-handle",
+          style: {
+            cursor: "default",
+          },
         });
       }
 
@@ -446,10 +475,15 @@ const CanvasFlow = observer(
       }
 
       if (!initialFitViewCalledRef.current) {
-        // Like fitViewOptions, never zoom past 100%, so a single short formula
-        // isn't blown up to fill the canvas.
-        fitView({ duration: 300, padding: 0.2, maxZoom: 1 });
         initialFitViewCalledRef.current = true;
+        // Like fitViewOptions, never zoom past 100%, so a single short formula
+        // isn't blown up to fill the canvas. The first fit runs while the
+        // canvas is still hidden, so it is instant and then reveals the canvas.
+        fitView({
+          duration: canvasRevealedRef.current ? 300 : 0,
+          padding: 0.2,
+          maxZoom: 1,
+        }).then(revealCanvas);
       }
     }, [
       nodesInitialized,
@@ -459,7 +493,15 @@ const CanvasFlow = observer(
       getViewport,
       setNodes,
       computationStore,
+      revealCanvas,
     ]);
+
+    // If the first layout never completes, such as when a formula fails to
+    // typeset, show what is there rather than an empty canvas
+    useEffect(() => {
+      const timeoutId = window.setTimeout(revealCanvas, REVEAL_FALLBACK_MS);
+      return () => window.clearTimeout(timeoutId);
+    }, [revealCanvas]);
 
     // Re-add variable nodes when computation store variables change
     useEffect(() => {
@@ -763,7 +805,10 @@ const CanvasFlow = observer(
     const proOptions = useMemo(() => ({ hideAttribution: true }), []);
 
     return (
-      <div ref={canvasContainerRef} className={`w-full h-full min-h-[500px] ${showGrips ? "show-grips" : ""}`}>
+      <div
+        ref={canvasContainerRef}
+        className={`w-full h-full min-h-[500px] ${showGrips ? "show-grips" : ""} ${canvasRevealed ? "canvas-revealed" : "canvas-pending"}`}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -781,6 +826,8 @@ const CanvasFlow = observer(
           zoomOnPinch={true}
           zoomOnDoubleClick={false}
           panOnDrag={false}
+          // Nodes can be dragged, by their handles, only in move mode
+          nodesDraggable={showGrips}
           selectNodesOnDrag={false}
           preventScrolling={false}
           autoPanOnNodeDrag={false}

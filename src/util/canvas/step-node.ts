@@ -270,7 +270,7 @@ export function createstepNode(
     data: {
       description: view.description ?? "",
     },
-    draggable: true,
+    // No draggable flag, so the canvas's nodesDraggable decides
     selectable: true,
     style: {
       opacity: 0, // Hidden until positioned

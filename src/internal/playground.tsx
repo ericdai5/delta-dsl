@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { observer } from "mobx-react-lite";
 
 import { useStore } from "../core/hooks";
-import { Config } from "../index.ts";
+import { ComputationStore } from "../store/computation";
 import { debugStore } from "../store/debug";
 import Canvas from "./canvas.tsx";
 import DebugModal from "./interpreter";
@@ -12,11 +12,28 @@ import Toolbar from "./toolbar";
 import TreeInspectorSidebar from "./tree-inspector-sidebar";
 import VariablesSidebar from "./variables-sidebar";
 
+interface IPlaygroundProps {
+  // Called when the canvas starts or stops showing the current example
+  onReadyChange?: (ready: boolean) => void;
+}
+
+// Each store gets a canvas of its own, identified by this key
+const storeKeys = new WeakMap<ComputationStore, number>();
+let nextStoreKey = 0;
+const getStoreKey = (store: ComputationStore): number => {
+  let key = storeKeys.get(store);
+  if (key === undefined) {
+    key = nextStoreKey++;
+    storeKeys.set(store, key);
+  }
+  return key;
+};
+
 /**
  * PlaygroundCanvas component that renders the canvas and debug tools.
  * Must be used within a Provider.
  */
-const PlaygroundCanvas = observer(() => {
+const PlaygroundCanvas = observer(({ onReadyChange }: IPlaygroundProps) => {
   const context = useStore();
   const [showNodeVisibilitySidebar, setShowNodeVisibilitySidebar] =
     useState<boolean>(false);
@@ -25,19 +42,25 @@ const PlaygroundCanvas = observer(() => {
   const [showVariablesSidebar, setShowVariablesSidebar] =
     useState<boolean>(false);
   const [showDebugModal, setShowDebugModal] = useState<boolean>(false);
-  const [configKey, setConfigKey] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const prevConfigRef = useRef<Config | null>(null);
   const computationStore = context?.computationStore;
   const currentConfig = context?.config;
+  // While the next store is being created, the current one is out of date
+  const isLoading = context?.isLoading ?? false;
 
-  // Update configKey when config changes to force re-render of Canvas
+  // The store whose canvas has arranged its items and is showing them
+  const [revealedStore, setRevealedStore] = useState<ComputationStore | null>(
+    null
+  );
+  const handleRevealed = useCallback(
+    () => setRevealedStore(computationStore ?? null),
+    [computationStore]
+  );
+  const canvasReady =
+    !!computationStore && !isLoading && revealedStore === computationStore;
   useEffect(() => {
-    if (currentConfig && currentConfig !== prevConfigRef.current) {
-      prevConfigRef.current = currentConfig;
-      setConfigKey((prev) => prev + 1);
-    }
-  }, [currentConfig]);
+    onReadyChange?.(canvasReady);
+  }, [canvasReady, onReadyChange]);
 
   // Check if step mode is available (for interpreter button)
   const isStepMode = computationStore?.isStepMode() ?? false;
@@ -49,13 +72,10 @@ const PlaygroundCanvas = observer(() => {
     }
   }, [showDebugModal, isStepMode]);
 
-  // Guard: context must be available
+  // Nothing to show until a store exists. The playground page draws its
+  // loading animation over this panel.
   if (!context || !computationStore) {
-    return (
-      <div className="formula-renderer overflow-hidden w-full h-full flex items-center justify-center">
-        <div className="text-slate-500">Loading...</div>
-      </div>
-    );
+    return <div className="formula-renderer overflow-hidden w-full h-full" />;
   }
 
   return (
@@ -83,12 +103,17 @@ const PlaygroundCanvas = observer(() => {
             className="interactive-formula-container w-full h-full overflow-auto"
           >
             <div className="min-w-0 w-full h-full overflow-auto bg-slate-50 text-center">
-              <Canvas
-                key={configKey}
-                controls={currentConfig?.controls}
-                environment={computationStore.environment || undefined}
-                computationStore={computationStore}
-              />
+              {/* Each store gets a fresh canvas, built from that store alone,
+                  and no canvas shows while the next store is loading */}
+              {!isLoading && (
+                <Canvas
+                  key={getStoreKey(computationStore)}
+                  controls={computationStore.environment?.controls}
+                  environment={computationStore.environment || undefined}
+                  computationStore={computationStore}
+                  onRevealed={handleRevealed}
+                />
+              )}
             </div>
           </div>
         </div>

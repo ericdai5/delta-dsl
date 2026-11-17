@@ -99,7 +99,7 @@ const unionExtents = (a: IExtent, b: IExtent): IExtent => ({
  * Get a formula's extent: the formula plus its visible labels, step
  * descriptions and expression highlights, which are all its child nodes
  */
-function getFormulaExtent(formulaNode: Node, nodes: Node[]): IExtent {
+export function getFormulaExtent(formulaNode: Node, nodes: Node[]): IExtent {
   let extent: IExtent = {
     left: 0,
     top: 0,

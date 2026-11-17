@@ -9,12 +9,18 @@ export interface StepNodeData {
   description: string;
 }
 
+interface IStepNodeProps {
+  data: StepNodeData;
+  // From React Flow: whether the node can be dragged right now
+  draggable?: boolean;
+}
+
 function formatDescriptionLatex(description: string): string {
   // Descriptions may contain mixed text + "$$...$$" math fragments.
   return formatInlineLatex(description) ?? toLatexText(description);
 }
 
-const StepNode = observer(({ data }: { data: StepNodeData }) => {
+const StepNode = observer(({ data, draggable }: IStepNodeProps) => {
   const { description } = data;
   const latexDescription = formatDescriptionLatex(description);
 
@@ -32,7 +38,7 @@ const StepNode = observer(({ data }: { data: StepNodeData }) => {
         width: "auto",
         height: "auto",
         position: "relative",
-        cursor: "grab",
+        cursor: draggable ? "grab" : "default",
         ...debugStyles,
       }}
       title="Step description"
