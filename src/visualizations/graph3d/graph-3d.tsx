@@ -6,6 +6,7 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "../../core/hooks";
 import { IGraph3D, IPoint3D } from "../../types/graph3d";
 import { getVariable, getVariableValue } from "../../util/computation-helpers";
+import { ownTouches } from "../../util/own-touches";
 import { sample3DLine, sample3DPoint, sampleSurface, getVariableRange } from "../graph2d/sampling-api";
 import { resolveColor, resolveLineColor } from "./color";
 
@@ -588,6 +589,13 @@ const Plot3D: React.FC<Plot3DProps> = observer(({ config }) => {
       zVar,
       config,
     ]);
+
+    // A finger on the plot turns it. Keep that touch from also moving a
+    // canvas that pans. Runs after every render, as the plot's element is
+    // not there while Plotly is loading.
+    useEffect(() => {
+      ownTouches(plotRef.current);
+    });
 
     // Cleanup on unmount
     useEffect(() => {

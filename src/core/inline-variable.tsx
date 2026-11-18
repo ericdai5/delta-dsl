@@ -8,6 +8,7 @@ import { ComputationStore } from "../store/computation";
 import { formatNumberForLatex } from "../util/format-number";
 import { showInlineEditOverlay } from "../util/inline-edit-overlay";
 import { getInputVariableState } from "../util/parse/variable";
+import { enableTouchDrag } from "../util/touch-drag";
 import { useMathJax } from "../util/use-mathjax";
 import { useStore } from "./hooks";
 
@@ -197,6 +198,7 @@ const InlineVariableInner = observer(
           };
 
           container.addEventListener("mousedown", handleMouseDown);
+          enableTouchDrag(container);
         }
 
         // Add click-to-edit for inline input variables

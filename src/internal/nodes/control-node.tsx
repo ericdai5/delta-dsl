@@ -7,6 +7,7 @@ import CheckboxControl from "../../core/controls/checkbox";
 import RadioControl from "../../core/controls/radio";
 import SetControl from "../../core/controls/set";
 import Slider from "../../core/controls/slider";
+import { ownTouches } from "../../util/own-touches";
 
 // Generic Control Node Component that handles all control types
 const ControlNode = observer(({ data }: { data: any }) => {
@@ -30,7 +31,8 @@ const ControlNode = observer(({ data }: { data: any }) => {
         <div className="control-drag-handle absolute top-1/2 -left-4 transform -translate-y-1/2 bg-white border border-slate-200 hover:bg-slate-50 rounded-md px-0.5 py-1 cursor-move z-20 opacity-0 transition-opacity duration-200">
           <GripVertical size={14} className="text-slate-400" />
         </div>
-        <div className="nodrag">
+        {/* A finger on a control works the control, not the canvas under it */}
+        <div className="nodrag" ref={ownTouches}>
           {control.type === "slider" && <Slider control={control} />}
           {control.type === "set" && <SetControl control={control} />}
           {control.type === "checkbox" && <CheckboxControl control={control} />}

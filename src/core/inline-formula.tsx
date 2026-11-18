@@ -15,6 +15,7 @@ import {
   updateVariableHoverState,
 } from "../util/scale-wrapper";
 import { injectVariableSVGs } from "../util/svg/svg-processor";
+import { enableTouchDrag } from "../util/touch-drag";
 import { useMathJax } from "../util/use-mathjax";
 import { getVariableElements } from "../util/variable-occurrence";
 import { useStore } from "./hooks";
@@ -145,6 +146,7 @@ const InlineFormulaInner = observer(
               };
 
               el.addEventListener("mousedown", handleMouseDown);
+              enableTouchDrag(el);
             }
           });
         });

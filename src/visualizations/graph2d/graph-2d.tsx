@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -7,6 +7,7 @@ import * as d3 from "d3";
 
 import { useStore } from "../../core/hooks";
 import { type IGraph2D, type IVector } from "../../types/graph2d";
+import { enableTouchDrag } from "../../util/touch-drag";
 import { type AxisLabelInfo, addAxes, addGrid } from "./axes";
 import { AxisLabels } from "./axis-labels";
 import { PLOT2D_DEFAULTS } from "./defaults";
@@ -51,7 +52,9 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
   const computationStore = context?.computationStore;
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const axisLabelInfoRef = useRef<AxisLabelInfo>({});
+  // Where the axis labels go. The plot is drawn in an effect, after the first
+  // render, so this is state: setting it renders the labels the draw placed.
+  const [axisLabelInfo, setAxisLabelInfo] = useState<AxisLabelInfo>({});
   // Track if drag is happening on THIS plot (to distinguish from formula variable drag)
   const isLocalDragRef = useRef(false);
   // Track focus state for graph interaction (persists across re-renders)
@@ -172,6 +175,30 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
+    // How much the plot is scaled on screen, by the canvas's zoom
+    const svgElement = svgRef.current;
+    const plotScale = () => {
+      const container = svgElement.parentElement;
+      const layoutWidth = container?.offsetWidth ?? 0;
+      if (!container || layoutWidth <= 0) return 1;
+      return container.getBoundingClientRect().width / layoutWidth || 1;
+    };
+    // Where a pointer is on the plot, in the plot's own units. d3.pointer
+    // maps through getScreenCTM, which Safari on iOS 17 works out without
+    // the canvas's zoom, so a finger on a zoomed canvas missed what it
+    // touched. The plot's box on screen does include the zoom.
+    const plotPointer = (point: {
+      clientX: number;
+      clientY: number;
+    }): [number, number] => {
+      const box = svgElement.getBoundingClientRect();
+      const scale = plotScale();
+      return [
+        (point.clientX - box.left) / scale - margin.left,
+        (point.clientY - box.top) / scale - margin.top,
+      ];
+    };
+
     // Create scales
     const xScale = d3.scaleLinear().domain([xMin, xMax]).range([0, plotWidth]);
     const yScale = d3.scaleLinear().domain([yMin, yMax]).range([plotHeight, 0]);
@@ -225,8 +252,12 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
       allYVariables: vectorVars.allYVariables,
     });
 
-    // Store label info in ref for React rendering
-    axisLabelInfoRef.current = labelInfo;
+    // Hand the labels to React to render, unless this draw left them as they were
+    setAxisLabelInfo((current) =>
+      JSON.stringify(current) === JSON.stringify(labelInfo)
+        ? current
+        : labelInfo
+    );
 
     // Add grid using helper function
     addGrid(svg, {
@@ -1056,9 +1087,7 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
         const handleGlobalMouseMove = (event: MouseEvent) => {
           if (!isDraggingRef.current || !lineHasInteraction) return;
           if (dragStartMousePos === null || dragStartValue === null) return;
-          const svgNode = svg.node();
-          if (!svgNode) return;
-          const [mouseX, mouseY] = d3.pointer(event, svgNode);
+          const [mouseX, mouseY] = plotPointer(event);
 
           // Calculate pixel delta and convert to variable range proportionally
           const variableRange = dragRange[1] - dragRange[0];
@@ -1095,7 +1124,12 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
 
         // Helper to find which line is closest to click position
         // Returns the index of the closest line with interaction, or -1 if none
-        const findClosestLine = (mouseX: number, mouseY: number): number => {
+        // is within reach (in the plot's own units)
+        const findClosestLine = (
+          mouseX: number,
+          mouseY: number,
+          reach = 30
+        ): number => {
           const lineConfigs = lines ?? [];
           let closestLineIndex = -1;
           let minDistance = Infinity;
@@ -1127,10 +1161,34 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
           });
 
           // Only return if within a reasonable threshold (e.g., 30 pixels)
-          return minDistance < 30 ? closestLineIndex : -1;
+          return minDistance < reach ? closestLineIndex : -1;
         };
 
         // Interaction rect handles line focus and line dragging (only if line has interaction)
+        // A finger drags a line in one go: a touch that starts on a line
+        // focuses it, taking the focus from a point that had it, and the
+        // press that follows drags it. Touches anywhere else on the plot are
+        // left alone, even with a line focused, so they can scroll the page
+        // or, on a canvas that pans, move and zoom the canvas.
+        const interactionRectNode = interactionRect.node();
+        if (interactionRectNode && lineHasInteraction) {
+          enableTouchDrag(interactionRectNode, {
+            when: (touch) => {
+              const [touchX, touchY] = plotPointer(touch);
+              // A finger reaches 30px on the screen, however far the canvas
+              // is zoomed out
+              const touchedLineIndex = findClosestLine(
+                touchX,
+                touchY,
+                Math.max(30, 30 / plotScale())
+              );
+              if (touchedLineIndex < 0) return false;
+              focusStateRef.current = { type: "line", index: touchedLineIndex };
+              updateCursors();
+              return true;
+            },
+          });
+        }
         interactionRect.on("mousedown", (event: MouseEvent) => {
           event.preventDefault();
 
@@ -1142,7 +1200,7 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
             return;
           }
 
-          const [mouseX, mouseY] = d3.pointer(event);
+          const [mouseX, mouseY] = plotPointer(event);
 
           if (focusStateRef.current === null) {
             // First click: find and focus the closest line
@@ -1255,9 +1313,7 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
                   pointDragStartValue === null
                 )
                   return;
-                const svgNode = svg.node();
-                if (!svgNode) return;
-                const [mouseX, mouseY] = d3.pointer(event, svgNode);
+                const [mouseX, mouseY] = plotPointer(event);
 
                 // Calculate pixel delta and convert to AXIS range proportionally
                 // This makes the point visually track the mouse position
@@ -1305,6 +1361,8 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
                 endDrag();
               };
 
+              const hitAreaNode = hitArea.node();
+              if (hitAreaNode) enableTouchDrag(hitAreaNode);
               hitArea.on("mousedown", (event: MouseEvent) => {
                 event.stopPropagation();
                 event.preventDefault();
@@ -1313,7 +1371,7 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
                 dragPointX = point.x;
 
                 // Capture initial mouse position and variable value for relative drag
-                const [mouseX, mouseY] = d3.pointer(event, svg.node());
+                const [mouseX, mouseY] = plotPointer(event);
                 pointDragStartMousePos = pointIsVerticalDrag ? mouseY : mouseX;
                 pointDragStartValue =
                   (computationStore.variables.get(pointDragVariable)
@@ -1546,9 +1604,7 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
                   stepPointDragStartValue === null
                 )
                   return;
-                const svgNode = svg.node();
-                if (!svgNode) return;
-                const [mouseX, mouseY] = d3.pointer(event, svgNode);
+                const [mouseX, mouseY] = plotPointer(event);
 
                 const axisRange = stepPointIsVerticalDrag
                   ? yMax - yMin
@@ -1600,11 +1656,13 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
                 computationStore.setDragging(false);
               };
 
+              const stepHitAreaNode = stepHitArea.node();
+              if (stepHitAreaNode) enableTouchDrag(stepHitAreaNode);
               stepHitArea.on("mousedown", (event: MouseEvent) => {
                 event.stopPropagation();
                 event.preventDefault();
 
-                const [mouseX, mouseY] = d3.pointer(event, svg.node());
+                const [mouseX, mouseY] = plotPointer(event);
                 stepPointDragStartMousePos = stepPointIsVerticalDrag
                   ? mouseY
                   : mouseX;
@@ -1769,18 +1827,18 @@ const Plot2D: React.FC<Plot2DProps> = observer(({ config }) => {
         }}
       />
       <AxisLabels
-        labelInfo={axisLabelInfoRef.current}
+        labelInfo={axisLabelInfo}
         xAxisHovered={
           xAxisVar
             ? computationStore.isVariableHighlighted(xAxisVar)
-            : axisLabelInfoRef.current.xLabel?.allXVariables.some((varId) =>
+            : axisLabelInfo.xLabel?.allXVariables.some((varId) =>
                 computationStore.isVariableHighlighted(varId)
               ) || false
         }
         yAxisHovered={
           yAxisVar
             ? computationStore.isVariableHighlighted(yAxisVar)
-            : axisLabelInfoRef.current.yLabel?.allYVariables.some((varId) =>
+            : axisLabelInfo.yLabel?.allYVariables.some((varId) =>
                 computationStore.isVariableHighlighted(varId)
               ) || false
         }
