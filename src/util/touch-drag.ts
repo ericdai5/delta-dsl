@@ -13,7 +13,7 @@ interface TouchDragOptions {
   // Decides, as a touch starts, whether it drags. Other touches are left to
   // the browser, so they can still scroll the page. Without this, every
   // touch on the element drags.
-  when?: () => boolean;
+  when?: (touch: Touch) => boolean;
 }
 
 // Elements already set up, with the function that undoes each
@@ -51,10 +51,10 @@ export const enableTouchDrag = (
 
   const handleTouchStart = (event: TouchEvent) => {
     if (activeTouchId !== null) return;
-    if (when && !when()) return;
     const touch = event.changedTouches[0];
     const target = event.target;
     if (!touch || !target) return;
+    if (when && !when(touch)) return;
     activeTouchId = touch.identifier;
 
     // Keep the browser from scrolling with this touch, and from sending its
