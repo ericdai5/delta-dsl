@@ -14,6 +14,7 @@ import {
   setupScaleWrappers,
   updateVariableHoverState,
 } from "../util/scale-wrapper";
+import { enableTouchDrag } from "../util/touch-drag";
 import { useMathJax } from "../util/use-mathjax";
 import { getVariableElements } from "../util/variable-occurrence";
 import { useStore } from "./hooks";
@@ -188,6 +189,7 @@ const EmbeddedFormulaInner = observer(
               };
 
               el.addEventListener("mousedown", handleMouseDown);
+              enableTouchDrag(el);
             }
           });
         });

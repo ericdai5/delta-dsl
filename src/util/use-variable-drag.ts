@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { ComputationStore } from "../store/computation";
 import { getInputVariableState } from "./parse/variable";
+import { enableTouchDrag } from "./touch-drag";
 
 interface UseVariableDragProps {
   varId: string;
@@ -70,7 +71,9 @@ export const useVariableDrag = ({
       document.addEventListener("mouseup", handleMouseUp, true);
     };
     element.addEventListener("mousedown", handleMouseDown);
+    const disableTouchDrag = enableTouchDrag(element);
     return () => {
+      disableTouchDrag();
       element.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("mousemove", handleMouseMove, true);
       document.removeEventListener("mouseup", handleMouseUp, true);
