@@ -1,7 +1,7 @@
 {
   "name": "delta-dsl",
   "private": false,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A React DSL for interactive mathematical expressions and visualizations",
   "type": "module",
   "main": "./dist/delta-dsl.cjs",
