@@ -11,6 +11,14 @@ import { NODE_TYPES, getFormulaElement } from "./node-helpers";
 // axis. The right column stacks the visualizations. A formula's block covers
 // its labels and step descriptions, so placing blocks apart keeps everything
 // drawn around one formula clear of its neighbors.
+//
+// On a narrow screen the two columns become one: the visualizations go under
+// the formulas, centered on the same axis.
+
+/**
+ * How the columns are arranged: side by side, or stacked into one column
+ */
+export type CanvasLayoutDirection = "columns" | "stack";
 
 /**
  * Bounds of a block relative to its node's position
@@ -69,6 +77,8 @@ export const LAYOUT_GAPS = {
   formula: 40,
   // Between visualizations
   visualization: 32,
+  // Between the formulas and the visualizations under them, in one column
+  stack: 48,
 } as const;
 
 /**
@@ -197,22 +207,37 @@ interface IStackItem {
 }
 
 /**
- * List each column's blocks top to bottom with the gap above each block
+ * List each column's blocks top to bottom with the gap above each block.
+ * Stacked, the visualizations follow the formulas in the first column and
+ * the second column is empty.
  */
-function getColumns({
-  controls,
-  formulas,
-  visualizations,
-}: ICanvasLayoutInput): IStackItem[][] {
+function getColumns(
+  { controls, formulas, visualizations }: ICanvasLayoutInput,
+  direction: CanvasLayoutDirection
+): IStackItem[][] {
+  const formulaColumn = [
+    ...controls.map((block) => ({ block, gapBefore: LAYOUT_GAPS.control })),
+    ...formulas.map((block, index) => ({
+      block,
+      gapBefore:
+        index === 0 ? LAYOUT_GAPS.controlToFormula : LAYOUT_GAPS.formula,
+    })),
+  ];
+  if (direction === "stack") {
+    return [
+      [
+        ...formulaColumn,
+        ...visualizations.map((block, index) => ({
+          block,
+          gapBefore:
+            index === 0 ? LAYOUT_GAPS.stack : LAYOUT_GAPS.visualization,
+        })),
+      ],
+      [],
+    ];
+  }
   return [
-    [
-      ...controls.map((block) => ({ block, gapBefore: LAYOUT_GAPS.control })),
-      ...formulas.map((block, index) => ({
-        block,
-        gapBefore:
-          index === 0 ? LAYOUT_GAPS.controlToFormula : LAYOUT_GAPS.formula,
-      })),
-    ],
+    formulaColumn,
     visualizations.map((block) => ({
       block,
       gapBefore: LAYOUT_GAPS.visualization,
@@ -245,15 +270,18 @@ function stackColumn(
  * Compute positions for the top-level nodes. Formulas share one vertical
  * axis: their relation symbols line up when every formula has one, and their
  * centers line up otherwise. Controls are centered over the formulas, and
- * the shorter column is centered vertically against the taller one.
+ * the shorter column is centered vertically against the taller one. Stacked,
+ * the visualizations are centered under the formulas instead.
  * @param input - Layout blocks sorted into columns
+ * @param direction - Columns side by side, or stacked into one
  * @returns Position for each block, keyed by node ID
  */
 export function computeCanvasLayout(
-  input: ICanvasLayoutInput
+  input: ICanvasLayoutInput,
+  direction: CanvasLayoutDirection = "columns"
 ): Map<string, IPosition> {
   const { controls, formulas, visualizations } = input;
-  const [formulaColumn, visualizationColumn] = getColumns(input);
+  const [formulaColumn, visualizationColumn] = getColumns(input, direction);
   const positions = new Map<string, IPosition>();
 
   const alignOnAnchors =
@@ -283,26 +311,28 @@ export function computeCanvasLayout(
     positions
   );
 
-  // Visualizations start a fixed gap right of the column's widest block,
-  // labels included
-  const columnRight = formulaColumn.length
-    ? Math.max(
-        ...formulaColumn.map(
-          ({ block }) => positions.get(block.id)!.x + block.extent.right
+  if (direction === "columns") {
+    // Visualizations start a fixed gap right of the column's widest block,
+    // labels included
+    const columnRight = formulaColumn.length
+      ? Math.max(
+          ...formulaColumn.map(
+            ({ block }) => positions.get(block.id)!.x + block.extent.right
+          )
         )
-      )
-    : -LAYOUT_GAPS.column;
-  const visualizationHeight = stackColumn(
-    visualizationColumn,
-    (block) => columnRight + LAYOUT_GAPS.column - block.extent.left,
-    positions
-  );
+      : -LAYOUT_GAPS.column;
+    const visualizationHeight = stackColumn(
+      visualizationColumn,
+      (block) => columnRight + LAYOUT_GAPS.column - block.extent.left,
+      positions
+    );
 
-  const offset = (columnHeight - visualizationHeight) / 2;
-  const shorter = offset > 0 ? visualizations : [...controls, ...formulas];
-  for (const block of shorter) {
-    const position = positions.get(block.id)!;
-    position.y += Math.abs(offset);
+    const offset = (columnHeight - visualizationHeight) / 2;
+    const shorter = offset > 0 ? visualizations : [...controls, ...formulas];
+    for (const block of shorter) {
+      const position = positions.get(block.id)!;
+      position.y += Math.abs(offset);
+    }
   }
 
   for (const position of positions.values()) {
@@ -342,10 +372,12 @@ export function keepInPlace(
  * blocks are closer than MIN_CLEARANCE, as when a long label reaches a graph
  * @param input - Layout blocks with their current extents
  * @param positions - Current position of each block's node
+ * @param direction - Columns side by side, or stacked into one
  */
 export function isLayoutCrowded(
   input: ICanvasLayoutInput,
-  positions: Map<string, IPosition>
+  positions: Map<string, IPosition>,
+  direction: CanvasLayoutDirection = "columns"
 ): boolean {
   const rectOf = (block: ILayoutBlock): IExtent | null => {
     const position = positions.get(block.id);
@@ -358,7 +390,7 @@ export function isLayoutCrowded(
     };
   };
 
-  for (const column of getColumns(input)) {
+  for (const column of getColumns(input, direction)) {
     for (let index = 1; index < column.length; index++) {
       const above = rectOf(column[index - 1].block);
       const below = rectOf(column[index].block);

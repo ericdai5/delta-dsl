@@ -152,6 +152,55 @@ describe("computeCanvasLayout", () => {
       y: 200 + LAYOUT_GAPS.visualization,
     });
   });
+
+  describe("stacked into one column", () => {
+    it("puts the graph under the controls and formulas", () => {
+      const positions = computeCanvasLayout(gradientDescent, "stack");
+      const blocks = allBlocks(gradientDescent);
+
+      expect(isLayoutCrowded(gradientDescent, positions, "stack")).toBe(false);
+      const graph = gradientDescent.visualizations[0];
+      const graphTop = rectOf(graph, positions.get(graph.id)!).top;
+      for (const block of blocks) {
+        if (block === graph) continue;
+        expect(
+          rectOf(block, positions.get(block.id)!).bottom
+        ).toBeLessThanOrEqual(graphTop - LAYOUT_GAPS.stack);
+      }
+    });
+
+    it("centers the graph under the formulas", () => {
+      const positions = computeCanvasLayout(gradientDescent, "stack");
+      const [loss, update] = gradientDescent.formulas;
+      const formulasLeft = Math.min(
+        positions.get(loss.id)!.x,
+        positions.get(update.id)!.x
+      );
+      const formulasRight = Math.max(
+        positions.get(loss.id)!.x + loss.width,
+        positions.get(update.id)!.x + update.width
+      );
+      const graph = gradientDescent.visualizations[0];
+      const graphCenter = positions.get(graph.id)!.x + graph.width / 2;
+
+      expect(
+        Math.abs(graphCenter - (formulasLeft + formulasRight) / 2)
+      ).toBeLessThanOrEqual(1);
+    });
+
+    it("keeps the formulas where the two-column layout puts them", () => {
+      const stacked = computeCanvasLayout(gradientDescent, "stack");
+      const columns = computeCanvasLayout(gradientDescent);
+      const [loss, update] = gradientDescent.formulas;
+
+      expect(stacked.get(update.id)!.x - stacked.get(loss.id)!.x).toBe(
+        columns.get(update.id)!.x - columns.get(loss.id)!.x
+      );
+      expect(stacked.get(update.id)!.y - stacked.get(loss.id)!.y).toBe(
+        columns.get(update.id)!.y - columns.get(loss.id)!.y
+      );
+    });
+  });
 });
 
 describe("isLayoutCrowded", () => {

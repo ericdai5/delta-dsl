@@ -15,6 +15,11 @@ import PlaygroundBreadcrumb from "./internal/playground-breadcrumb";
 import { debugStore } from "./store/debug";
 import IconButton from "./ui/icon-button";
 import { executeUserCode } from "./util/code-executor";
+import {
+  PHONE_SCREEN_QUERY,
+  matchesMediaQuery,
+  useMediaQuery,
+} from "./util/use-media-query";
 
 // The code editor's undo and redo shortcuts (CodeMirror's history keymap):
 // redo is Shift+Cmd+Z on a Mac and Ctrl+Y elsewhere.
@@ -47,7 +52,13 @@ const APIPage = observer(() => {
     return exampleKeys[0];
   }, [exampleId, exampleKeys]);
 
-  const [isRendered, setIsRendered] = useState<boolean>(true);
+  // A phone has no room for the code panel beside the canvas. There the
+  // panel starts closed and opens over the canvas, leaving a strip down the
+  // right edge for its buttons.
+  const isPhone = useMediaQuery(PHONE_SCREEN_QUERY);
+  const [isRendered, setIsRendered] = useState<boolean>(
+    () => !matchesMediaQuery(PHONE_SCREEN_QUERY)
+  );
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   // Whether the canvas is showing the current config, laid out
@@ -154,11 +165,19 @@ const APIPage = observer(() => {
       <div ref={containerRef} className="relative min-h-0 flex-1 flex">
         {/* Editor Panel */}
         <div
-          className={`${isRendered ? "border-r border-slate-200" : ""} overflow-hidden flex flex-col flex-shrink-0`}
-          style={{
-            width: isRendered ? editorWidth : 0,
-            transition: isRendered ? undefined : "width 0.3s ease-in-out",
-          }}
+          className={
+            isPhone
+              ? `absolute inset-y-0 left-0 right-14 z-40 flex-col overflow-hidden border-r border-slate-200 bg-white ${isRendered ? "flex" : "hidden"}`
+              : `${isRendered ? "border-r border-slate-200" : ""} overflow-hidden flex flex-col flex-shrink-0`
+          }
+          style={
+            isPhone
+              ? undefined
+              : {
+                  width: isRendered ? editorWidth : 0,
+                  transition: isRendered ? undefined : "width 0.3s ease-in-out",
+                }
+          }
         >
           <div className="min-w-[300px] h-full flex flex-col">
             <div className="flex-1 min-h-0 overflow-hidden">
@@ -184,7 +203,7 @@ const APIPage = observer(() => {
         </div>
 
         {/* Resize Handle */}
-        {isRendered && (
+        {isRendered && !isPhone && (
           <div className="relative flex-shrink-0 w-0">
             <div
               onMouseDown={handleResizeStart}
@@ -207,9 +226,18 @@ const APIPage = observer(() => {
           {/* One loader covers every stage: MathJax loading, the store being
               created and the canvas laying itself out */}
           <CanvasLoader active={!!config && !error && !canvasReady} />
+          {/* On a phone, the open code panel stops short of the right edge.
+              This covers the canvas in the strip it leaves. */}
+          {isPhone && isRendered && (
+            <div className="absolute inset-y-0 right-0 z-40 w-14 bg-white" />
+          )}
           {/* Editor controls sit just outside the code panel, against its
-              right border, so they never cover the code. */}
-          <div className="absolute top-2.5 left-2.5 z-30 flex flex-col gap-2">
+              right border, so they never cover the code. On a phone that is
+              the strip the open panel leaves. They have no tooltips there: a
+              touch has no hover, and a tap would leave one stuck open. */}
+          <div
+            className={`absolute top-2.5 flex flex-col gap-2 ${isPhone && isRendered ? "right-2.5 z-50" : "left-2.5 z-30"}`}
+          >
             {/* The toggle comes first so it stays in the same spot whether
                 the editor is open or collapsed. */}
             {isRendered ? (
@@ -219,7 +247,7 @@ const APIPage = observer(() => {
                   icon={PanelRightOpen}
                   alt="Toggle Editor"
                   onClick={() => setIsRendered(!isRendered)}
-                  title="Toggle Code Editor"
+                  title={isPhone ? undefined : "Toggle Code Editor"}
                   tooltipPosition="right"
                 />
                 <IconButton
@@ -227,7 +255,7 @@ const APIPage = observer(() => {
                   icon={Sparkles}
                   alt="Format Code"
                   onClick={() => debugStore.toggleAutoFormat()}
-                  title="Format Code"
+                  title={isPhone ? undefined : "Format Code"}
                   tooltipPosition="right"
                   isActive={debugStore.autoFormat}
                 />
@@ -238,7 +266,7 @@ const APIPage = observer(() => {
                 icon={PanelRightClose}
                 alt="Toggle Editor"
                 onClick={() => setIsRendered(!isRendered)}
-                title="Toggle Code Editor"
+                title={isPhone ? undefined : "Toggle Code Editor"}
                 tooltipPosition="right"
               />
             )}

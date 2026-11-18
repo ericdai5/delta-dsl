@@ -27,6 +27,7 @@ import {
   updateAllLabelNodes as updateAllLabelNodesUtil,
 } from "../util/canvas/label-node";
 import {
+  CanvasLayoutDirection,
   IExtent,
   IPosition,
   areFormulasTypeset,
@@ -50,6 +51,7 @@ import {
   useAddVariableNodes,
   useUpdateVariableNodes,
 } from "../util/canvas/variable-nodes";
+import { NARROW_SCREEN_QUERY, useMediaQuery } from "../util/use-media-query";
 import { CanvasControls } from "./canvas-controls";
 import { nodeTypes as defaultNodeTypes } from "./nodes/node";
 import BayesProbabilityChart from "../visualizations/custom/components/bayes-probability-chart";
@@ -102,6 +104,16 @@ const CanvasFlow = observer(
 
     // Track if the top-level nodes have been arranged since they were created
     const layoutAppliedRef = useRef(false);
+
+    // A narrow screen, such as a phone held upright, gets one column: the
+    // visualizations go under the formulas. The ref holds the direction the
+    // nodes were last arranged for.
+    const layoutDirection: CanvasLayoutDirection = useMediaQuery(
+      NARROW_SCREEN_QUERY
+    )
+      ? "stack"
+      : "columns";
+    const appliedDirectionRef = useRef(layoutDirection);
 
     // Largest extent each top-level node has had, so the space reserved for
     // labels never shrinks while stepping through a walkthrough
@@ -433,6 +445,8 @@ const CanvasFlow = observer(
       if (!areFormulasTypeset(nodes)) return;
 
       const isFirstLayout = !layoutAppliedRef.current;
+      // The screen went between wide and narrow since the nodes were arranged
+      const directionChanged = appliedDirectionRef.current !== layoutDirection;
       if (
         isFirstLayout ||
         (!userArrangedRef.current && !computationStore.isDragging)
@@ -448,18 +462,26 @@ const CanvasFlow = observer(
             .filter((node) => !node.parentId)
             .map((node) => [node.id, node.position])
         );
-        if (isFirstLayout || isLayoutCrowded(blocks, currentPositions)) {
+        if (
+          isFirstLayout ||
+          directionChanged ||
+          isLayoutCrowded(blocks, currentPositions, layoutDirection)
+        ) {
           let positions = computeCanvasLayout(
-            withFormulaAnchors(reservedBlocks, nodes, getViewport().zoom)
+            withFormulaAnchors(reservedBlocks, nodes, getViewport().zoom),
+            layoutDirection
           );
           // Keep the top of the formula column, such as the walkthrough
           // controls the reader is clicking, where it was
           const anchor = blocks.controls[0] ?? blocks.formulas[0];
           const anchorPosition = anchor && currentPositions.get(anchor.id);
-          if (!isFirstLayout && anchorPosition) {
+          if (!isFirstLayout && !directionChanged && anchorPosition) {
             positions = keepInPlace(positions, anchor.id, anchorPosition);
           }
           layoutAppliedRef.current = true;
+          appliedDirectionRef.current = layoutDirection;
+          // A new arrangement has a new shape, so fit the view to it again
+          if (directionChanged) initialFitViewCalledRef.current = false;
           const moved = nodes.some((node) => {
             const position = positions.get(node.id);
             return (
@@ -500,6 +522,7 @@ const CanvasFlow = observer(
       setNodes,
       computationStore,
       revealCanvas,
+      layoutDirection,
     ]);
 
     // If the first layout never completes, such as when a formula fails to
@@ -815,7 +838,7 @@ const CanvasFlow = observer(
     return (
       <div
         ref={canvasContainerRef}
-        className={`w-full h-full min-h-[500px] touch-none ${showGrips ? "show-grips" : ""} ${canvasRevealed ? "canvas-revealed" : "canvas-pending"}`}
+        className={`w-full h-full min-h-[500px] touch-none [@media(max-height:500px)]:min-h-0 ${showGrips ? "show-grips" : ""} ${canvasRevealed ? "canvas-revealed" : "canvas-pending"}`}
       >
         <ReactFlow
           nodes={nodes}
