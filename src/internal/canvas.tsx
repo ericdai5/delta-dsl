@@ -68,6 +68,12 @@ const BAYES_FORMULA_ID = "bayes-theorem";
 // How long the canvas waits for its first layout before showing itself anyway
 const REVEAL_FALLBACK_MS = 2000;
 
+// The mouse buttons that pan the canvas when dragged: none. React Flow turns
+// away every touch, a pinch included, while panOnDrag is false. An empty
+// list keeps the mouse from panning but lets fingers through, so one finger
+// pans the canvas and two zoom it.
+const TOUCH_ONLY_PAN: number[] = [];
+
 const CanvasFlow = observer(
   ({ controls, environment, computationStore, onRevealed }: CanvasProps) => {
     // Toggle state for showing all drag handles
@@ -804,10 +810,12 @@ const CanvasFlow = observer(
 
     const proOptions = useMemo(() => ({ hideAttribution: true }), []);
 
+    // touch-none: a finger on the canvas pans or zooms the canvas, so the
+    // browser must not scroll or zoom the page with the same touch
     return (
       <div
         ref={canvasContainerRef}
-        className={`w-full h-full min-h-[500px] ${showGrips ? "show-grips" : ""} ${canvasRevealed ? "canvas-revealed" : "canvas-pending"}`}
+        className={`w-full h-full min-h-[500px] touch-none ${showGrips ? "show-grips" : ""} ${canvasRevealed ? "canvas-revealed" : "canvas-pending"}`}
       >
         <ReactFlow
           nodes={nodes}
@@ -825,7 +833,7 @@ const CanvasFlow = observer(
           panOnScroll={true}
           zoomOnPinch={true}
           zoomOnDoubleClick={false}
-          panOnDrag={false}
+          panOnDrag={TOUCH_ONLY_PAN}
           // Nodes can be dragged, by their handles, only in move mode
           nodesDraggable={showGrips}
           selectNodesOnDrag={false}
